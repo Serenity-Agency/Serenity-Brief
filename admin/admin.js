@@ -262,7 +262,7 @@ function requestClose() {
     closePanel();
     return;
   }
-  if (window.confirm("Есть несохранённые изменения. Закрыть карточку без сохранения?")) closePanel();
+  if (window.confirm("Есть несохраненные изменения. Закрыть карточку без сохранения?")) closePanel();
 }
 
 function closePanel() {

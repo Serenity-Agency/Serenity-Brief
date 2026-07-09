@@ -35,7 +35,7 @@ export async function onRequestPost({ params, request, env }) {
     result = await response.json();
   } catch (error) {
     console.error("Session submit proxy failed", error);
-    return json({ ok: false, message: "Не удалось отправить бриф. Попробуйте ещё раз." }, 502);
+    return json({ ok: false, message: "Не удалось отправить бриф. Попробуйте еще раз." }, 502);
   }
 
   if (!result?.ok) {

@@ -6,7 +6,7 @@ export async function onRequest({ request, env }) {
   // Checking for the JWT header here is secondary defense — the header is injected
   // by CF Access after successful Google auth and never arrives from outside.
   if (!request.headers.get("CF-Access-Jwt-Assertion")) {
-    return respond({ ok: false, message: "Доступ запрещён." }, 401);
+    return respond({ ok: false, message: "Доступ запрещен." }, 401);
   }
 
   if (!env.APPS_SCRIPT_URL || !env.FORM_API_SECRET) {
