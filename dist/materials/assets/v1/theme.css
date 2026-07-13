@@ -202,9 +202,8 @@ h3{font-size:16.5px;font-weight:700;letter-spacing:-0.01em;}
   letter-spacing:0.08em;text-transform:uppercase;
 }
 .price-card h3{font-size:17px;}
-.price-card .price{font-size:clamp(24px,2.4vw,30px);font-weight:800;letter-spacing:-0.01em;margin:16px 0 4px;}
+.price-card .price{font-size:clamp(24px,2.4vw,30px);font-weight:800;letter-spacing:-0.01em;margin:16px 0 22px;}
 .price-card .price span{font-size:13px;font-weight:600;color:var(--gray-2);margin-left:4px;}
-.price-card .price-total{font-size:12.5px;color:var(--gray-2);margin-bottom:22px;}
 .price-card ul{list-style:none;display:flex;flex-direction:column;gap:10px;}
 .price-card li{font-size:13.5px;color:var(--gray);line-height:1.5;padding-left:18px;position:relative;}
 .price-card li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:var(--purple-soft);}
