@@ -175,7 +175,6 @@ h3{font-size:16.5px;font-weight:700;letter-spacing:-0.01em;}
 
 /* ---------- badges ---------- */
 .badge-row{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:44px;}
-.badge-row.cols-2{grid-template-columns:repeat(2,1fr);max-width:760px;}
 .badge{
   background:var(--card);border:1px solid var(--card-line);border-radius:20px;
   padding:28px 26px;text-align:left;transition:transform .45s var(--ease),border-color .45s var(--ease);
@@ -261,7 +260,6 @@ h3{font-size:16.5px;font-weight:700;letter-spacing:-0.01em;}
   .dotnav{display:none;}
   .grid{grid-template-columns:1fr;}
   .badge-row{grid-template-columns:1fr;}
-  .badge-row.cols-2{grid-template-columns:1fr;}
   .pricing-grid{grid-template-columns:1fr;}
   .steps{grid-template-columns:1fr;}
   .stat-strip{grid-template-columns:repeat(2,1fr);row-gap:24px;}
