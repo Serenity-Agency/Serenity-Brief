@@ -78,7 +78,7 @@ async function loadCurrentUser() {
     return;
   }
   if (!res.ok || !data.ok) {
-    handleAuthError("auth_error", "Сервис временно недоступен. Попробуйте позже.", data.message || String(res.status));
+    handleAuthError("auth_error", "Сервис временно недоступен. Попробуйте обновить страницу.", data.message || String(res.status));
     return;
   }
 
@@ -553,16 +553,7 @@ function showAppError(message, code) {
 }
 function handleAuthError(code, userMessage, technical) {
   console.error("[admin] " + code + (technical ? ": " + technical : ""));
-  var isFatal = code === "session_expired" || code === "access_denied";
-  if (isFatal) {
-    showAppError(userMessage, code);
-  } else {
-    var userEl = el("current-user");
-    if (userEl) {
-      userEl.textContent = userMessage;
-      userEl.classList.add("user-error");
-    }
-  }
+  showAppError(userMessage, code);
 }
 function esc(value) {
   return String(value || "")
