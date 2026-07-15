@@ -82,10 +82,11 @@ stripped = stripBlock(stripped, 'window.addEventListener("unhandledrejection"');
 const extract = new Function(`
   "use strict";
   ${stripped}
-  return { loadCurrentUser, showAppError, handleAuthError, el, show, hide };
+  return { loadCurrentUser, loadBriefs, showAppError, handleAuthError, el, show, hide };
 `);
 
 const fns = extract();
+const { loadBriefs } = fns;
 
 // ─── Reset helper ─────────────────────────────────────────────────────────────
 
@@ -169,24 +170,26 @@ await run("403: #app-error с сообщением про вайтлист, ко
   assert.ok(isHidden("loading"), "#loading скрыт");
 });
 
-// ─── Test 4: 500 server error (non-fatal) ────────────────────────────────────
+// ─── Test 4: 500 от /me — фатальный ─────────────────────────────────────────
 
-await run("500: #app-error скрыт, ошибка в #current-user с классом user-error", async () => {
+await run("/me 500: #app-error показан, текст 'обновить страницу', loading скрыт", async () => {
   mockFetch(500, { ok: false, message: "Internal Server Error" });
   await fns.loadCurrentUser();
-  assert.ok(isHidden("app-error"), "#app-error скрыт для 5xx");
-  assert.ok(elements["current-user"].textContent.includes("Сервис"), "текст о временной недоступности");
-  assert.ok(elements["current-user"].classList.contains("user-error"), "класс user-error в заголовке");
+  assert.ok(isVisible("app-error"), "#app-error должен быть виден");
+  assert.ok(elements["app-error-msg"].textContent.includes("обновить страницу"), "текст с 'обновить страницу'");
+  assert.ok(elements["app-error-code"].textContent.includes("auth_error"), "код ошибки auth_error");
+  assert.ok(isHidden("loading"), "#loading скрыт");
 });
 
-// ─── Test 5: Network error (non-fatal) ───────────────────────────────────────
+// ─── Test 5: Network error от /me — фатальный ────────────────────────────────
 
-await run("Network error: #app-error скрыт, ошибка в #current-user", async () => {
+await run("/me network error: #app-error показан, loading скрыт", async () => {
   globalThis.fetch = async () => { throw new TypeError("Failed to fetch"); };
   await fns.loadCurrentUser();
-  assert.ok(isHidden("app-error"), "#app-error скрыт для network_error");
-  assert.ok(elements["current-user"].textContent.includes("соединиться"), "текст network error");
-  assert.ok(elements["current-user"].classList.contains("user-error"), "класс user-error");
+  assert.ok(isVisible("app-error"), "#app-error должен быть виден");
+  assert.ok(elements["app-error-msg"].textContent.includes("соединиться"), "текст network error");
+  assert.ok(elements["app-error-code"].textContent.includes("network_error"), "код ошибки");
+  assert.ok(isHidden("loading"), "#loading скрыт");
 });
 
 // ─── Test 6: showAppError с отсутствующими элементами ───────────────────────
@@ -201,17 +204,14 @@ await run("showAppError: не бросает TypeError, когда элемен�
   }
 });
 
-// ─── Test 7: handleAuthError с отсутствующим #current-user ──────────────────
+// ─── Test 7: handleAuthError всегда показывает #app-error ───────────────────
 
-await run("handleAuthError(non-fatal): не бросает, когда #current-user отсутствует", () => {
-  const saved = elements["current-user"];
-  delete elements["current-user"];
-  try {
-    fns.handleAuthError("auth_error", "msg", "detail"); // must not throw
-  } finally {
-    elements["current-user"] = saved;
-  }
-  assert.ok(warnings.some(w => w.includes("current-user")), "console.warn про отсутствующий элемент");
+await run("handleAuthError: всегда вызывает showAppError, не бросает", () => {
+  fns.handleAuthError("auth_error", "Тест сообщение", "tech detail");
+  assert.ok(isVisible("app-error"), "#app-error показан");
+  assert.ok(elements["app-error-msg"].textContent.includes("Тест"), "текст передан в #app-error-msg");
+  assert.ok(elements["app-error-code"].textContent.includes("auth_error"), "код ошибки в #app-error-code");
+  assert.ok(errors.some(e => e.includes("auth_error")), "console.error вызван с кодом");
 });
 
 // ─── Test 8: el() возвращает null без исключения ─────────────────────────────
@@ -220,6 +220,23 @@ await run("el(): возвращает null для несуществующего
   const result = fns.el("nonexistent-element-xyz");
   assert.equal(result, null);
   assert.ok(warnings.some(w => w.includes("nonexistent-element-xyz")), "console.warn с именем элемента");
+});
+
+// ─── Test 9: /api/admin/briefs 500 — нефатальный (интерфейс остаётся) ────────
+
+await run("/briefs 500: #app-error скрыт, inline #error показан", async () => {
+  // Успешная авторизация — me возвращает 200
+  mockFetch(200, { ok: true, name: "Анна", email: "anna@serenity.agency" });
+  await fns.loadCurrentUser();
+  assert.ok(isHidden("app-error"), "#app-error скрыт после успешного /me");
+
+  // Затем briefs возвращает 500
+  mockFetch(500, { ok: false, message: "Внутренняя ошибка сервера" });
+  await fns.loadBriefs();
+
+  assert.ok(isHidden("app-error"), "#app-error скрыт — ошибка briefs нефатальна");
+  assert.ok(isVisible("error"),    "#error виден — inline-ошибка в блоке брифов");
+  assert.ok(isHidden("loading"),   "#loading скрыт после завершения запроса");
 });
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
