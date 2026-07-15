@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
 const output = new URL("./dist/", import.meta.url);
@@ -58,8 +59,9 @@ function buildHeadersFile() {
 
 async function stampAdminHtml(src, dst) {
   const html = await readFile(src, "utf8");
-  const buildId = new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC";
-  await writeFile(dst, html.replace("__APP_BUILD__", buildId));
+  const sha = execSync("git rev-parse --short HEAD").toString().trim();
+  const ts = new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC";
+  await writeFile(dst, html.replace("__APP_BUILD__", sha + " · " + ts));
 }
 
 console.log("Built Cloudflare Pages frontend");
