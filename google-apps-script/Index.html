@@ -948,6 +948,8 @@ const performanceBudgetOptions = [
   "Хочу обсудить"
 ];
 
+const sourceOptions = ["Рекомендация", "Поиск (Google, Яндекс)", "Соцсети", "Реклама", "Уже работали с Serenity", "Мероприятие / публикация", "Другое"];
+
 const primaryDeadlineOptions = [
   "Как можно скорее",
   "В течение месяца",
@@ -996,7 +998,7 @@ const commonSections = [
       field("contact_name", "Как к вам обращаться?", "text", "Имя и должность", true),
       field("contact_email", "Email для связи", "email", "Используем, чтобы связаться по задаче", true),
       field("contact_phone", "Телефон", "tel", "Укажите, если удобно созвониться или написать в мессенджере"),
-      field("contact_social", "Мессенджер или соцсеть", "text", "Например: @username в Telegram или ссылка на профиль"),
+      field("contact_social", "Мессенджер или другой контакт для связи", "text", "Telegram, WhatsApp или ссылка на профиль, где вам удобно общаться"),
       field("business", "Что важно знать о вашем бизнесе для этой задачи?", "textarea", "То, чего не видно на сайте")
     ]
   },
@@ -1017,7 +1019,7 @@ const performanceAboutSection = {
     field("contact_name", "Как к вам обращаться?", "text", "Имя и должность", true),
     field("contact_email", "Email для связи", "email", "Используем, чтобы связаться по задаче", true),
     field("contact_phone", "Телефон", "tel", "Укажите, если удобно созвониться или написать в мессенджере"),
-    field("contact_social", "Мессенджер или соцсеть", "text", "Например: @username в Telegram или ссылка на профиль"),
+    field("contact_social", "Мессенджер или другой контакт для связи", "text", "Telegram, WhatsApp или ссылка на профиль, где вам удобно общаться"),
     field("business", "Что важно знать о вашем бизнесе для этой задачи?", "textarea", "Ниша, регион, особенности бизнеса, ограничения, сезонность или другие важные детали.")
   ]
 };
@@ -1194,8 +1196,7 @@ const briefTypes = [
         choice("resources", "Кто может помогать с оперативными правками?", ["Разработчик", "Дизайнер", "Контент-менеджер", "Маркетолог", "Менеджер продаж", "Пока никто", "Не знаю"]),
         choice("assets", "Какие материалы для рекламы уже готовы?", ["Фото", "Видео", "Креативы", "Тексты", "Товарный фид", "Баннеры", "Ничего пока нет", "Другое"]),
         field("assets_comment", "Комментарий по материалам", "textarea", "Если выбрали «Другое» или нужно пояснить готовность материалов."),
-        field("additional_links", "Если есть дополнительные сайты, соцсети или другие площадки — укажите ссылки.", "textarea"),
-        field("source", "Как вы о нас узнали?", "text")
+        field("additional_links", "Если есть дополнительные сайты, соцсети или другие площадки — укажите ссылки.", "textarea")
       ])
     ],
     false
@@ -1209,27 +1210,27 @@ const briefTypes = [
       ...commonSections,
       section("Сайт и спрос", [
         field("site", "Какой сайт продвигаем?", "text", "", true),
-        field("regions", "Какие регионы и языки важны?", "textarea"),
+        field("cms", "На какой CMS работает сайт?", "text"),
         field("directions", "Какие направления приоритетны?", "textarea"),
+        field("regions", "Какие регионы важны?", "textarea"),
         field("seasonality", "Есть ли сезонность спроса?", "textarea")
       ]),
       section("История SEO", [
         field("history", "Что уже делали по SEO?", "textarea", "Подрядчики, работы, сроки, результаты"),
         field("problems", "Какие проблемы сайта уже известны?", "textarea"),
-        field("analytics", "Какая аналитика подключена?", "textarea"),
-        field("contractor", "Если меняете подрядчика, что важно улучшить в работе?", "textarea")
+        field("contractor", "Если меняете подрядчика, что важно улучшить в работе?", "textarea"),
+        field("site_changes", "Планируются ли крупные изменения сайта в ближайшие 6–12 месяцев?", "textarea", "Редизайн, смена CMS, перенос домена, изменение структуры")
       ]),
       section("Контент и конкуренты", [
         field("competitors", "С кем конкурируете в поиске?", "textarea"),
+        field("references", "Есть ли сайты или компании, на которые ориентируетесь как на пример?", "textarea"),
         field("content", "Кто может готовить и согласовывать контент?", "textarea"),
-        field("expertise", "Какие эксперты доступны внутри компании?", "textarea"),
-        field("kpi", "Какой результат SEO важен бизнесу?", "textarea")
+        field("developer", "Есть ли разработчик для технических изменений на сайте?", "textarea")
       ]),
-      section("Дополнительные вводные", [
-        field("developer", "Есть ли разработчик для технических изменений на сайте?", "textarea"),
-        field("other_sites", "Есть ли у компании другие сайты?", "textarea", "Добавьте ссылки, если их нужно учитывать"),
-        field("materials", "Какие отчеты, исследования или материалы уже можно изучить?", "textarea"),
-        field("additional", "Что еще важно учесть при оценке SEO-задачи?", "textarea")
+      section("Цели и аналитика", [
+        choice("analytics", "Какие системы аналитики подключены?", ["Яндекс Метрика", "Яндекс Вебмастер", "Google Analytics", "Google Search Console", "CRM", "Коллтрекинг", "Ничего", "Не знаю"]),
+        choice("kpi", "Какой результат SEO важен бизнесу?", ["Увеличение трафика", "Рост заявок", "Увеличение продаж", "Снижение CPL", "Узнаваемость бренда", "Выход на новые рынки"]),
+        field("materials", "Какие отчеты, исследования или материалы уже можно изучить?", "textarea")
       ])
     ]
   ),
@@ -1241,14 +1242,16 @@ const briefTypes = [
     [
       ...commonSections,
       section("Роль соцсетей", [
-        choice("goals", "Для чего бренду соцсети?", ["Продажи", "Узнаваемость", "Имидж", "Комьюнити", "Поддержка клиентов", "Работа с сотрудниками"]),
+        choice("goals", "Для чего бренду соцсети?", ["Продажи", "Узнаваемость", "Имидж", "Комьюнити", "Поддержка клиентов", "Работа с сотрудниками", "Продвижение личного бренда основателя/эксперта/сотрудника"]),
         field("platforms", "Какие площадки ведете или рассматриваете?", "textarea"),
+        field("links", "Укажите ссылки на сайт, соцсети и каналы бренда", "textarea", "Сайт, Instagram, Telegram, VK, YouTube и другие площадки бренда, которые нам важно посмотреть перед подготовкой предложения."),
         field("audience", "С кем хотим общаться?", "textarea"),
         field("tone", "Как бренд должен звучать?", "textarea", "Можно привести примеры близких по тону аккаунтов")
       ]),
       section("Контент", [
         field("topics", "О чем бренд может говорить регулярно?", "textarea"),
         field("experts", "Кто может участвовать в создании контента?", "textarea"),
+        { ...choice("brand_face", "Есть ли человек со стороны бренда, который готов участвовать в контенте?", ["Основатель / собственник", "Руководитель / эксперт компании", "Сотрудник / команда", "Амбассадор / лицо бренда", "Пока нет", "Другое"]), help: "Например: записывать короткие ролики, давать комментарии, участвовать в интервью или съемках." },
         field("assets", "Какие материалы уже есть?", "textarea", "Фото, видео, исследования, кейсы, брендбук"),
         field("restrictions", "Что нельзя публиковать или обсуждать?", "textarea")
       ]),
@@ -1264,7 +1267,7 @@ const briefTypes = [
     "website",
     "Бриф на сайт",
     "Для запуска или обновления сайта. Оценим задачи, материалы, функциональность и объем разработки.",
-    "≈ 15 минут",
+    "≈ 5–10 минут",
     [
       ...commonSections,
       section("Задача сайта", [
@@ -1278,16 +1281,16 @@ const briefTypes = [
         field("problems", "Что в текущем сайте не устраивает?", "textarea")
       ]),
       section("Аудитория и контент", [
-        field("audience", "Кто будет пользоваться сайтом?", "textarea"),
-        field("scenarios", "Что посетитель должен сделать на сайте?", "textarea"),
-        field("structure", "Какие разделы точно нужны?", "textarea"),
+        field("audience", "Кратко опишите целевую аудиторию сайта", "textarea"),
+        field("scenarios", "Перечислите основные сценарии конверсий на сайте: покупка, оформление заявки, консультация, подписка, регистрация и т.д.", "textarea"),
+        field("structure", "Перечислите разделы и страницы структуры сайта, которые точно нужны", "textarea"),
         field("content", "Какие материалы уже готовы?", "textarea")
       ]),
       section("Функциональность", [
         field("functions", "Какие функции и интеграции нужны?", "textarea", "CRM, оплата, каталог, личный кабинет, калькулятор"),
         field("cms", "Есть ли требования к CMS и технологиям?", "textarea"),
         field("references", "Какие сайты нравятся и почему?", "textarea"),
-        field("support", "Кто будет обновлять сайт после запуска?", "textarea")
+        field("support", "Требуется ли поддержка сайта после запуска?", "textarea")
       ]),
       section("Дополнительные вводные", [
         field("brand_assets", "Есть ли логотип, фирменный стиль и исходные материалы?", "textarea"),
@@ -1334,7 +1337,7 @@ const briefTypes = [
       ...commonSections,
       section("Бренд", [
         choice("branding_task", "Какая задача стоит?", ["Новый бренд", "Ребрендинг", "Обновление стиля", "Логотип", "Гайдлайн", "Пока не знаем"], true),
-        field("story", "Расскажите историю бренда", "textarea"),
+        field("story", "Какой товар или услугу продвигает бренд и в чем ваше преимущество?", "textarea"),
         field("positioning", "Как бренд позиционируется сейчас?", "textarea"),
         field("changes", "Что должно измениться в восприятии бренда?", "textarea")
       ]),
@@ -1387,16 +1390,19 @@ const briefTypes = [
     [
       ...commonSections,
       section("Публичная задача", [
-        choice("pr_goal", "Что должен изменить PR?", ["Узнаваемость", "Доверие", "Репутация", "Поддержка продаж", "Выход на новый рынок", "Экспертность"]),
-        field("audience", "На чье мнение нужно повлиять?", "textarea"),
-        field("messages", "Какие мысли аудитория должна запомнить?", "textarea"),
+        choice("pr_goal", "Что должен изменить PR?", ["Узнаваемость", "Доверие", "Репутация", "Поддержка продаж", "Выход на новый рынок", "Экспертность"], true),
+        choice("pr_tool", "Какой PR-инструмент нужен?", ["PR: работа с изданиями и СМИ", "PR: работа с лидерами мнений / блогерами", "PR: работа с отзывами и репутацией", "PR: узнаваемость в digital / SERM", "Предложите решение"]),
+        choice("audience", "На чье мнение нужно повлиять?", ["Конечный потребитель", "Общество в целом", "Категория граждан", "Закупщик / дистрибутор", "Производитель", "Представитель профессии", "Родитель", "Другое"], true),
+        field("audience_detail", "Уточните аудиторию", "textarea", "Дополнительный комментарий, если выбрали «Другое» или хотите пояснить"),
+        field("messages", "Какие мысли аудитория должна запомнить?", "textarea", "", true),
         field("risks", "Есть ли чувствительные темы или репутационные риски?", "textarea")
       ]),
       section("Инфополе", [
-        field("media", "Где бренд уже представлен?", "textarea", "СМИ, рейтинги, конференции, соцсети"),
-        field("speakers", "Кто может выступать от лица компании?", "textarea"),
-        field("reasons", "Какие инфоповоды ожидаются?", "textarea"),
-        field("competitors", "Чью публичность считаете сильной?", "textarea")
+        field("media", "Где бренд уже представлен?", "textarea", "СМИ, рейтинги, конференции, соцсети", true),
+        field("speakers", "Кто может выступать от лица компании?", "textarea", "", true),
+        field("reasons", "Какие инфоповоды ожидаются?", "textarea", "", true),
+        field("competitors", "Чью публичность считаете сильной?", "textarea", "", true),
+        field("publicity_why", "Что именно нравится в их публичности?", "textarea")
       ]),
       section("Процессы", [
         field("materials", "Какие материалы и исследования доступны?", "textarea"),
@@ -1416,17 +1422,33 @@ const state = {
   sending: false,
   submission: null,
   error: "",
-  formStartedAt: Date.now()
+  formStartedAt: Date.now(),
+  sessionUpdatedAt: null,
+  sessionStatus: "draft",
+  sessionClientName: "",
+  sessionError: "",
+  createResult: null,
+  createError: "",
+  createSending: false,
+  createManagerName: ""
 };
 
 const app = document.querySelector("#app");
 const saveStatus = document.querySelector("#save-status");
 const requestedBriefId = new URLSearchParams(window.location.search).get("brief");
+const sessionToken = new URLSearchParams(window.location.search).get("session");
+const adminParam = new URLSearchParams(window.location.search).get("admin");
 
-if (briefTypes.some((item) => item.id === requestedBriefId)) {
+if (!sessionToken && !adminParam && briefTypes.some((item) => item.id === requestedBriefId)) {
   state.briefId = requestedBriefId;
   state.screen = "brief";
 }
+
+if (adminParam && !sessionToken) {
+  state.screen = "create";
+}
+
+let sessionSaveTimer = null;
 
 function field(id, label, type = "text", help = "", required = false) {
   return { id, label, type, help, required };
@@ -1445,7 +1467,14 @@ function section(title, fields) {
 }
 
 function brief(id, title, description, time, sections, includeFinalSection = true) {
-  return { id, title, description, time, sections: includeFinalSection ? [...sections, finalSection] : sections };
+  const withSource = sections.map((s, i) => {
+    if (i !== sections.length - 1 || s.fields.some(f => f.id === "source")) return s;
+    return { ...s, fields: [...s.fields,
+      choice("source", "Как вы о нас узнали?", sourceOptions),
+      field("source_other", "Уточните источник", "text", "Если выбрали «Другое» или хотите добавить детали")
+    ]};
+  });
+  return { id, title, description, time, sections: includeFinalSection ? [...withSource, finalSection] : withSource };
 }
 
 function formatTime(time) {
@@ -1462,7 +1491,10 @@ function getBriefIntro(briefItem) {
 }
 
 function render() {
-  saveStatus.hidden = state.screen === "home";
+  saveStatus.hidden = ["home", "loading", "session_error", "create"].includes(state.screen);
+  if (state.screen === "loading") return renderSessionLoading();
+  if (state.screen === "session_error") return renderSessionError();
+  if (state.screen === "create") return renderCreate();
   if (state.screen === "brief") return renderBrief();
   if (state.screen === "result") return renderResult();
   renderHome();
@@ -1501,7 +1533,7 @@ function renderBrief() {
   app.innerHTML = `
     <div class="brief-shell">
       <aside class="brief-aside">
-        <button class="back-link" type="button" data-action="home">← Все брифы</button>
+        ${sessionToken ? "" : `<button class="back-link" type="button" data-action="home">← Все брифы</button>`}
         <h2>${current.title}</h2>
         <p>${getBriefIntro(current)}</p>
         <span class="aside-time">${formatCompactTime(current.time)}</span>
@@ -1608,7 +1640,7 @@ function renderResult() {
             <p class="result-copy">Ответы сохранились у команды Serenity. Мы изучим задачу и вернемся к вам по указанному контакту.</p>
           </div>
           <div class="result-actions">
-            <button class="button secondary" type="button" data-action="edit">Вернуться к ответам</button>
+            ${!(sessionToken && state.sessionStatus === "submitted") ? `<button class="button secondary" type="button" data-action="edit">Вернуться к ответам</button>` : ""}
             <button class="button" type="button" data-action="copy">Скопировать ответы</button>
           </div>
         </div>
@@ -1666,9 +1698,13 @@ function saveAnswers() {
     }
   }
   state.answers[state.briefId] = data;
-  const saved = writeStorage("serenityBriefAnswers", state.answers);
   updateProgress();
-  setSaveStatus(saved ? "Черновик сохранен" : "Черновик только в этой вкладке", saved ? "" : "error");
+  if (sessionToken) {
+    scheduleSessionSave();
+  } else {
+    const saved = writeStorage("serenityBriefAnswers", state.answers);
+    setSaveStatus(saved ? "Черновик сохранен" : "Черновик только в этой вкладке", saved ? "" : "error");
+  }
 }
 
 function getRequiredProgress() {
@@ -1790,7 +1826,10 @@ async function submitBrief() {
     });
   }
 
-  const response = await fetch(publicConfig.submissionEndpoint, {
+  const endpoint = sessionToken
+    ? `/api/session/${sessionToken}/submit`
+    : publicConfig.submissionEndpoint;
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
@@ -1799,6 +1838,7 @@ async function submitBrief() {
   if (!response.ok || !result?.ok) {
     throw new Error(result?.message || "Не удалось отправить бриф. Попробуйте еще раз.");
   }
+  if (sessionToken) state.sessionStatus = "submitted";
   return result;
 }
 
@@ -1870,6 +1910,15 @@ document.addEventListener("click", async (event) => {
       actionButton.textContent = "Скопировать ответы";
     }, 1800);
   }
+  if (action === "copy-link" && state.createResult?.url) {
+    try {
+      await navigator.clipboard.writeText(state.createResult.url);
+      actionButton.textContent = "Скопировано";
+    } catch {
+      actionButton.textContent = "Не удалось скопировать";
+    }
+    setTimeout(() => { actionButton.textContent = "Скопировать"; }, 1800);
+  }
 });
 
 document.addEventListener("input", (event) => {
@@ -1879,6 +1928,40 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("submit", async (event) => {
+  if (event.target.id === "create-form") {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const createdBy = formData.get("createdBy") || "";
+    state.createManagerName = createdBy;
+    state.createSending = true;
+    state.createError = "";
+    render();
+    try {
+      const response = await fetch("/api/session/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adminSecret: adminParam,
+          briefId: formData.get("briefId"),
+          clientName: formData.get("clientName"),
+          createdBy
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      state.createSending = false;
+      if (result?.ok) {
+        state.createResult = result;
+        state.createError = "";
+      } else {
+        state.createError = result?.message || "Не удалось создать ссылку.";
+      }
+    } catch {
+      state.createSending = false;
+      state.createError = "Не удалось создать ссылку. Проверьте соединение.";
+    }
+    render();
+    return;
+  }
   if (event.target.id !== "brief-form") return;
   event.preventDefault();
   saveAnswers();
@@ -1928,7 +2011,174 @@ function updateUrl(briefId = "") {
   window.history.replaceState({}, "", url);
 }
 
-render();
+async function loadSession() {
+  state.screen = "loading";
+  render();
+  let data = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(`/api/session/${sessionToken}`);
+      if (response.status === 404) {
+        state.screen = "session_error";
+        state.sessionError = "Ссылка недействительна или устарела. Обратитесь к менеджеру Serenity.";
+        render();
+        return;
+      }
+      data = await response.json().catch(() => null);
+      if (data) break;
+    } catch {
+      if (attempt === 2) {
+        state.screen = "session_error";
+        state.sessionError = "Не удалось загрузить бриф. Проверьте соединение и обновите страницу.";
+        render();
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
+  }
+  if (!data?.ok) {
+    state.screen = "session_error";
+    state.sessionError = data?.message || "Не удалось загрузить бриф.";
+    render();
+    return;
+  }
+  state.briefId = data.briefId;
+  state.answers = data.answers || {};
+  state.sessionUpdatedAt = data.updatedAt;
+  state.sessionStatus = data.status;
+  state.sessionClientName = data.clientName || "";
+  state.screen = data.status === "submitted" ? "result" : "brief";
+  render();
+}
+
+function scheduleSessionSave() {
+  setSaveStatus("Сохранение…", "sending");
+  clearTimeout(sessionSaveTimer);
+  sessionSaveTimer = setTimeout(doSessionSave, 2000);
+}
+
+async function doSessionSave() {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(`/api/session/${sessionToken}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: state.answers, clientUpdatedAt: state.sessionUpdatedAt })
+      });
+      if (response.status === 409) {
+        setSaveStatus("Данные обновились в другой вкладке. Обновите страницу.", "error");
+        return;
+      }
+      if (response.status === 423) {
+        setSaveStatus("Бриф уже отправлен.", "error");
+        return;
+      }
+      if (response.ok) {
+        const result = await response.json().catch(() => ({}));
+        state.sessionUpdatedAt = result.updatedAt || state.sessionUpdatedAt;
+        const time = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+        setSaveStatus(`Сохранено облачно · ${time}`);
+        return;
+      }
+      throw new Error(`HTTP ${response.status}`);
+    } catch {
+      if (attempt === 2) {
+        setSaveStatus("Не удалось сохранить — проверьте соединение", "error");
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+    }
+  }
+}
+
+function renderSessionLoading() {
+  app.innerHTML = `
+    <section class="result">
+      <div class="result-card">
+        <div class="result-head">
+          <div><h1>Загружаем бриф…</h1></div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderSessionError() {
+  app.innerHTML = `
+    <section class="result">
+      <div class="result-card">
+        <div class="result-head">
+          <div>
+            <h1>Ссылка недействительна</h1>
+            <p class="result-copy">${escapeHtml(state.sessionError || "Эта ссылка устарела или не существует. Обратитесь к менеджеру Serenity.")}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderCreate() {
+  const briefOptions = briefTypes
+    .map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title)}</option>`)
+    .join("");
+  app.innerHTML = `
+    <section class="result">
+      <div class="result-card">
+        <div class="result-head">
+          <div>
+            <span class="tag">Менеджер</span>
+            <h1>Создать ссылку на бриф</h1>
+          </div>
+        </div>
+        ${state.createResult ? `
+          <div style="margin:1.5rem 0;padding:1rem 1.25rem;background:var(--surface-alt,#f5f5f5);border-radius:8px">
+            <p style="margin:0 0 .5rem;font-size:.875rem;opacity:.7">Ссылка создана</p>
+            <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+              <code style="flex:1;word-break:break-all;font-size:.875rem">${escapeHtml(state.createResult.url)}</code>
+              <button class="button" type="button" data-action="copy-link">Скопировать</button>
+            </div>
+          </div>
+        ` : ""}
+        <form id="create-form">
+          <div class="fields">
+            <div class="field">
+              <label for="create-brief">Тип брифа</label>
+              <select id="create-brief" name="briefId" required style="width:100%;padding:.5rem .75rem;font-size:1rem;border:1px solid currentColor;border-radius:6px;opacity:.8">
+                <option value="">Выберите бриф</option>
+                ${briefOptions}
+              </select>
+            </div>
+            <div class="field">
+              <label for="create-client">Компания / клиент <span class="required">*</span></label>
+              <input id="create-client" type="text" name="clientName" required>
+            </div>
+            <div class="field">
+              <label for="create-manager">Создал</label>
+              <input id="create-manager" type="text" name="createdBy" value="${escapeHtml(state.createManagerName)}">
+            </div>
+          </div>
+          ${state.createError ? `<p class="form-error" role="alert">${escapeHtml(state.createError)}</p>` : ""}
+          <div class="form-actions">
+            <button class="button" type="submit"${state.createSending ? " disabled" : ""}>
+              ${state.createSending ? "Создаем…" : "Создать ссылку →"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+  `;
+}
+
+async function init() {
+  if (sessionToken) {
+    await loadSession();
+  } else {
+    render();
+  }
+}
+
+init();
 </script>
 </body>
 </html>

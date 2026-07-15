@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Входящие брифы — Serenity</title>
+  <meta name="app-build" content="42a6cc9 · 2026-07-15 12:01 UTC">
   <link rel="stylesheet" href="./admin.css">
 </head>
 <body>
@@ -12,9 +13,19 @@
     <span class="header-sep">·</span>
     <span class="header-title">Входящие брифы</span>
     <span id="current-user" class="current-user">Проверяем доступ…</span>
+    <a href="/cdn-cgi/access/logout" class="btn-logout">Выйти</a>
   </header>
 
   <main class="main">
+    <div id="app-error" class="app-error hidden" role="alert">
+      <p id="app-error-msg" class="app-error-msg"></p>
+      <div class="app-error-actions">
+        <button id="app-error-retry" class="btn-secondary" type="button">Обновить страницу</button>
+        <a href="/cdn-cgi/access/logout" class="btn-secondary">Выйти и войти снова</a>
+      </div>
+      <small id="app-error-code" class="app-error-code"></small>
+    </div>
+
     <section class="create-card">
       <div>
         <h1>Ссылки для клиентов</h1>

@@ -1,3 +1,12 @@
+window.addEventListener("error", function (event) {
+  console.error("[admin] js_error:", event.message, "at", event.filename + ":" + event.lineno);
+  try { showAppError("Не удалось загрузить интерфейс. Обновите страницу.", "js_error"); } catch (e) {}
+});
+
+window.addEventListener("unhandledrejection", function (event) {
+  console.error("[admin] unhandled_rejection:", event.reason);
+});
+
 const BRIEFS = [
   ["primary", "Первичный бриф"],
   ["startup", "Стратегия для стартапа"],
@@ -24,41 +33,66 @@ let savedPanelState = "";
 let closeAfterConfirm = null;
 let currentUser = null;
 
-document.addEventListener("DOMContentLoaded", function () {
-  initFilters();
-  initSearch();
-  initPanel();
-  initCreateModal();
-  el("btn-refresh").addEventListener("click", loadBriefs);
-  window.addEventListener("beforeunload", function (event) {
-    if (!hasUnsavedChanges()) return;
-    event.preventDefault();
-    event.returnValue = "";
-  });
-  loadCurrentUser();
-  loadBriefs();
+document.addEventListener("DOMContentLoaded", async function () {
+  try {
+    initFilters();
+    initSearch();
+    initPanel();
+    initCreateModal();
+    var refreshBtn = el("btn-refresh");
+    if (refreshBtn) refreshBtn.addEventListener("click", loadBriefs);
+    var retryBtn = document.getElementById("app-error-retry");
+    if (retryBtn) retryBtn.addEventListener("click", function () { window.location.reload(); });
+    window.addEventListener("beforeunload", function (event) {
+      if (!hasUnsavedChanges()) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
+    await loadCurrentUser();
+    if (currentUser) loadBriefs();
+  } catch (err) {
+    console.error("[admin] init_error:", err);
+    showAppError("Не удалось загрузить интерфейс. Обновите страницу.", "init_error");
+  }
 });
 
 async function loadCurrentUser() {
-  const button = el("btn-open-create");
-  button.disabled = true;
+  var button = el("btn-open-create");
+  if (button) button.disabled = true;
+
+  var res, data;
   try {
-    const res = await fetch("/api/admin/me");
-    const data = await res.json().catch(function () { return {}; });
-    if (!res.ok || !data.ok) throw new Error(data.message || "Не удалось определить пользователя.");
-    currentUser = { name: data.name, email: data.email };
-    el("current-user").textContent = "Вы вошли как: " + data.name + " · " + data.email;
-    el("current-user").classList.remove("user-error");
-    el("create-manager-note").textContent = "Ответственный: " + data.name + " · " + data.email;
-    button.disabled = false;
-    el("filter-mine").disabled = false;
+    res = await fetch("/api/admin/me");
+    data = await res.json().catch(function () { return {}; });
   } catch (err) {
-    currentUser = null;
-    el("current-user").textContent = err.message;
-    el("current-user").classList.add("user-error");
-    el("create-manager-note").textContent = "";
-    button.disabled = true;
+    handleAuthError("network_error", "Не удалось соединиться с сервером. Проверьте соединение и обновите страницу.", String(err));
+    return;
   }
+
+  if (res.status === 401) {
+    handleAuthError("session_expired", data.message || "Сессия истекла. Выйдите и войдите снова.", null);
+    return;
+  }
+  if (res.status === 403) {
+    handleAuthError("access_denied", data.message || "Нет доступа к панели брифов.", null);
+    return;
+  }
+  if (!res.ok || !data.ok) {
+    handleAuthError("auth_error", "Сервис временно недоступен. Попробуйте обновить страницу.", data.message || String(res.status));
+    return;
+  }
+
+  currentUser = { name: data.name, email: data.email };
+  var userEl = el("current-user");
+  if (userEl) {
+    userEl.textContent = "Вы вошли как: " + data.name + " · " + data.email;
+    userEl.classList.remove("user-error");
+  }
+  var noteEl = el("create-manager-note");
+  if (noteEl) noteEl.textContent = "Ответственный: " + data.name + " · " + data.email;
+  if (button) button.disabled = false;
+  var mineBtn = el("filter-mine");
+  if (mineBtn) mineBtn.disabled = false;
 }
 
 async function loadBriefs() {
@@ -66,7 +100,8 @@ async function loadBriefs() {
   hide("error");
   hide("empty");
   hide("list");
-  el("btn-refresh").disabled = true;
+  var refreshBtn = el("btn-refresh");
+  if (refreshBtn) refreshBtn.disabled = true;
 
   try {
     const res = await fetch("/api/admin/briefs");
@@ -85,7 +120,8 @@ async function loadBriefs() {
     hide("loading");
     showError(err.message || "Не удалось загрузить заявки.");
   } finally {
-    el("btn-refresh").disabled = false;
+    var refreshBtn = el("btn-refresh");
+    if (refreshBtn) refreshBtn.disabled = false;
   }
 }
 
@@ -494,12 +530,30 @@ function setMessage(id, text, isError) {
   node.className = "save-msg" + (isError ? " msg-err" : text ? " msg-ok" : "");
 }
 
-function el(id) { return document.getElementById(id); }
-function show(id) { el(id).classList.remove("hidden"); }
-function hide(id) { el(id).classList.add("hidden"); }
+function el(id) {
+  var node = document.getElementById(id);
+  if (!node) console.warn("[admin] element not found: #" + id);
+  return node;
+}
+function show(id) { var node = el(id); if (node) node.classList.remove("hidden"); }
+function hide(id) { var node = el(id); if (node) node.classList.add("hidden"); }
 function showError(message) {
-  el("error").textContent = message;
+  var errorEl = el("error");
+  if (errorEl) errorEl.textContent = message;
   show("error");
+}
+function showAppError(message, code) {
+  var msgEl = document.getElementById("app-error-msg");
+  var codeEl = document.getElementById("app-error-code");
+  var errEl = document.getElementById("app-error");
+  if (msgEl) msgEl.textContent = message;
+  if (codeEl) codeEl.textContent = code ? "код: " + code : "";
+  if (errEl) errEl.classList.remove("hidden");
+  hide("loading");
+}
+function handleAuthError(code, userMessage, technical) {
+  console.error("[admin] " + code + (technical ? ": " + technical : ""));
+  showAppError(userMessage, code);
 }
 function esc(value) {
   return String(value || "")

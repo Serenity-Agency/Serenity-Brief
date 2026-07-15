@@ -300,6 +300,47 @@ button { cursor: pointer; }
 .link-divider { height: 1px; margin: 20px 0; background: var(--border); }
 #btn-create-another { margin-top: 18px; }
 
+.btn-logout {
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: none;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-left: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-logout:hover { color: var(--text); border-color: var(--muted); }
+
+.app-error {
+  padding: 32px 20px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  margin-bottom: 22px;
+}
+.app-error-msg {
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+.app-error-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.app-error-code {
+  display: block;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 11px;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+}
+
 .hidden { display: none !important; }
 body.panel-open { overflow: hidden; }
 
