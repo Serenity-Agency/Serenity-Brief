@@ -1,13 +1,11 @@
 // GET  /api/admin/briefs        → list all briefs from Sheets
 // PATCH /api/admin/briefs       → update status/responsible/amoLink
 
+import { getAdminUser } from "../../../lib/admin-user.js";
+
 export async function onRequest({ request, env }) {
-  // Cloudflare Access is the primary auth guard (/admin* policy in CF dashboard).
-  // Checking for the JWT header here is secondary defense — the header is injected
-  // by CF Access after successful Google auth and never arrives from outside.
-  if (!request.headers.get("CF-Access-Jwt-Assertion")) {
-    return respond({ ok: false, message: "Доступ запрещен." }, 401);
-  }
+  const user = await getAdminUser(request, env);
+  if (!user.ok) return respond(user, user.status);
 
   if (!env.APPS_SCRIPT_URL || !env.FORM_API_SECRET) {
     return respond({ ok: false, message: "Сервис недоступен." }, 503);

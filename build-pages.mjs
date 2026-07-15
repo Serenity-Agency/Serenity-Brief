@@ -1,4 +1,5 @@
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { execSync } from "node:child_process";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
 const output = new URL("./dist/", import.meta.url);
 
@@ -11,7 +12,7 @@ await Promise.all([
   cp(new URL("./index.html", import.meta.url), new URL("./index.html", output)),
   cp(new URL("./styles.css", import.meta.url), new URL("./styles.css", output)),
   cp(new URL("./app.js", import.meta.url), new URL("./app.js", output)),
-  cp(new URL("./admin/index.html", import.meta.url), new URL("./admin/index.html", output)),
+  stampAdminHtml(new URL("./admin/index.html", import.meta.url), new URL("./admin/index.html", output)),
   cp(new URL("./admin/admin.js", import.meta.url),   new URL("./admin/admin.js", output)),
   cp(new URL("./admin/admin.css", import.meta.url),  new URL("./admin/admin.css", output)),
   cp(new URL("./materials/", import.meta.url), new URL("./materials/", output), { recursive: true }),
@@ -54,6 +55,13 @@ function buildHeadersFile() {
   Cache-Control: public, max-age=3600, must-revalidate`;
 
   return `${formBlocks}\n\n${materialsBlock}\n`;
+}
+
+async function stampAdminHtml(src, dst) {
+  const html = await readFile(src, "utf8");
+  const sha = execSync("git rev-parse --short HEAD").toString().trim();
+  const ts = new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC";
+  await writeFile(dst, html.replace("__APP_BUILD__", sha + " · " + ts));
 }
 
 console.log("Built Cloudflare Pages frontend");
