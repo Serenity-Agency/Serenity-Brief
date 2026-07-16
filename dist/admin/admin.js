@@ -25,6 +25,7 @@ const BRIEFS = [
 const BRIEF_TITLE_TO_ID = Object.fromEntries(BRIEFS.map(function (item) { return [item[1], item[0]]; }));
 
 let briefs = [];
+let briefSessions = [];
 let currentFilter = "all";
 let currentSearch = "";
 let currentId = null;
@@ -41,6 +42,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     initCreateModal();
     var refreshBtn = el("btn-refresh");
     if (refreshBtn) refreshBtn.addEventListener("click", loadBriefs);
+    var sessionRefreshBtn = el("btn-refresh-sessions");
+    if (sessionRefreshBtn) sessionRefreshBtn.addEventListener("click", loadSessions);
     var retryBtn = document.getElementById("app-error-retry");
     if (retryBtn) retryBtn.addEventListener("click", function () { window.location.reload(); });
     window.addEventListener("beforeunload", function (event) {
@@ -49,7 +52,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       event.returnValue = "";
     });
     await loadCurrentUser();
-    if (currentUser) loadBriefs();
+    if (currentUser) {
+      await Promise.all([loadBriefs(), loadSessions()]);
+    }
   } catch (err) {
     console.error("[admin] init_error:", err);
     showAppError("Не удалось загрузить интерфейс. Обновите страницу.", "init_error");
@@ -122,6 +127,26 @@ async function loadBriefs() {
   } finally {
     var refreshBtn = el("btn-refresh");
     if (refreshBtn) refreshBtn.disabled = false;
+  }
+}
+
+async function loadSessions() {
+  var list = el("session-list");
+  var button = el("btn-refresh-sessions");
+  if (!list) return;
+  if (button) button.disabled = true;
+  list.innerHTML = '<div class="state-msg compact">Загрузка ссылок…</div>';
+
+  try {
+    const res = await fetch("/api/admin/sessions");
+    const data = await res.json().catch(function () { return {}; });
+    if (!res.ok || !data.ok) throw new Error(data.message || "Не удалось получить ссылки.");
+    briefSessions = data.sessions || [];
+    renderSessions();
+  } catch (err) {
+    list.innerHTML = '<div class="inline-error">Не удалось загрузить ссылки. Попробуйте обновить блок.</div>';
+  } finally {
+    if (button) button.disabled = false;
   }
 }
 
@@ -198,6 +223,117 @@ function renderList() {
   el("list").querySelectorAll(".card").forEach(function (card) {
     card.addEventListener("click", function () { openPanel(card.dataset.id); });
   });
+}
+
+function renderSessions() {
+  var list = el("session-list");
+  if (!list) return;
+  if (!briefSessions.length) {
+    list.innerHTML = '<div class="empty-links">Пока нет персональных ссылок. Создайте первую ссылку для клиента.</div>';
+    return;
+  }
+
+  list.innerHTML = briefSessions.slice(0, 12).map(function (session) {
+    var status = sessionStatus(session.status);
+    var portal = session.portalWorkspace || null;
+    var action = "";
+    if (portal && portal.workspace_url) {
+      action = '<a class="btn-action btn-small" href="' + esc(portal.workspace_url) + '" target="_blank" rel="noopener noreferrer">Открыть в Presale Portal</a>';
+    } else if (session.status === "filled") {
+      action = '<button class="btn-primary btn-small" type="button" data-portal-token="' + esc(session.token) + '">Создать Workspace</button>';
+    } else {
+      action = '<button class="btn-secondary btn-small" type="button" disabled>Ждём заполнения</button>';
+    }
+    return (
+      '<article class="session-card" data-session-token="' + esc(session.token) + '">' +
+        '<div class="session-main">' +
+          '<span class="badge ' + esc(status.className) + '">' + esc(status.label) + '</span>' +
+          '<strong>' + esc(session.clientName || "Без названия") + '</strong>' +
+          '<small>' + esc(briefLabel(session.briefId, session.briefTitle)) + '</small>' +
+          '<small>Ответственный: ' + esc(session.createdBy || "не указан") + '</small>' +
+        '</div>' +
+        '<div class="session-meta">' +
+          '<span>' + esc(formatDateTime(session.createdAt)) + '</span>' +
+          (session.amoUrl ? '<a href="' + esc(session.amoUrl) + '" target="_blank" rel="noopener noreferrer">amoCRM</a>' : '<span>amoCRM не указан</span>') +
+          '<button class="btn-secondary btn-small" type="button" data-copy-session="' + esc(session.token) + '">Скопировать ссылку</button>' +
+          action +
+          '<span class="session-message" data-session-message="' + esc(session.token) + '"></span>' +
+        '</div>' +
+      '</article>'
+    );
+  }).join("");
+
+  list.querySelectorAll("[data-copy-session]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var session = briefSessions.find(function (item) { return item.token === button.dataset.copySession; });
+      if (session && session.url) copyText(session.url, button, "Ссылка скопирована");
+    });
+  });
+  list.querySelectorAll("[data-portal-token]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      createWorkspaceForSession(button.dataset.portalToken, button);
+    });
+  });
+}
+
+function sessionStatus(status) {
+  if (status === "filled") return { label: "заполнена", className: "s-filled" };
+  if (status === "opened") return { label: "открыта", className: "s-opened" };
+  return { label: "создана", className: "s-created" };
+}
+
+function briefLabel(briefId, briefTitle) {
+  if (briefTitle) return briefTitle;
+  var found = BRIEFS.find(function (item) { return item[0] === briefId; });
+  return found ? found[1] : (briefId || "Бриф");
+}
+
+function formatDateTime(value) {
+  if (!value) return "дата не указана";
+  var date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("ru-RU") + " " + String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0");
+}
+
+async function createWorkspaceForSession(token, button) {
+  var message = document.querySelector('[data-session-message="' + cssEscape(token) + '"]');
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Создаю…";
+  }
+  if (message) message.textContent = "";
+
+  try {
+    const res = await fetch("/api/admin/portal-workspaces", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: token })
+    });
+    const data = await res.json().catch(function () { return {}; });
+    if (!res.ok || !data.ok) throw new Error(data.message || "Не удалось создать Workspace.");
+    var session = briefSessions.find(function (item) { return item.token === token; });
+    if (session) {
+      session.portalWorkspace = {
+        brief_id: data.brief_id,
+        workspace_id: data.workspace_id,
+        workspace_url: data.workspace_url,
+        created: data.created,
+        existing: data.existing
+      };
+    }
+    renderSessions();
+    if (data.workspace_url) window.open(data.workspace_url, "_blank", "noopener,noreferrer");
+  } catch (err) {
+    if (message) {
+      message.textContent = err.message || "Presale Portal временно недоступен. Попробуйте ещё раз.";
+      message.className = "session-message msg-err";
+    }
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Создать Workspace";
+    }
+  }
 }
 
 function emptyMessage() {
@@ -454,6 +590,12 @@ async function createPersonalLink(event) {
     }
     el("personal-link").value = data.url;
     el("general-link").value = window.location.origin + "/?brief=" + payload.briefId;
+    if (data.session) {
+      briefSessions = [data.session].concat(briefSessions.filter(function (item) { return item.token !== data.session.token; }));
+      renderSessions();
+    } else {
+      loadSessions();
+    }
     hide("create-form");
     show("create-result");
   } catch (err) {
@@ -522,6 +664,11 @@ function isHttpUrl(value) {
   } catch {
     return false;
   }
+}
+
+function cssEscape(value) {
+  if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(value);
+  return String(value || "").replace(/["\\]/g, "\\$&");
 }
 
 function setMessage(id, text, isError) {

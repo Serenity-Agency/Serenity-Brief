@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Входящие брифы — Serenity</title>
-  <meta name="app-build" content="42a6cc9 · 2026-07-15 12:01 UTC">
+  <meta name="app-build" content="9c0627f · 2026-07-16 09:15 UTC">
   <link rel="stylesheet" href="./admin.css">
 </head>
 <body>
@@ -28,10 +28,23 @@
 
     <section class="create-card">
       <div>
-        <h1>Ссылки для клиентов</h1>
-        <p>Персональная ссылка сохраняет черновик клиента и закрепляет заявку за менеджером.</p>
+        <h1>Создать ссылку на бриф</h1>
+        <p>Создайте персональную ссылку, дождитесь заполнения и откройте Workspace в Presale Portal.</p>
       </div>
       <button id="btn-open-create" class="btn-primary">+ Создать персональную ссылку</button>
+    </section>
+
+    <section class="link-workflow">
+      <div class="workflow-head">
+        <div>
+          <h2>Персональные ссылки</h2>
+          <p>Маршрут менеджера: ссылка → заполненный бриф → Workspace → Presale Decision.</p>
+        </div>
+        <button id="btn-refresh-sessions" class="btn-secondary" type="button">Обновить</button>
+      </div>
+      <div id="session-list" class="session-list">
+        <div class="state-msg">Загрузка ссылок…</div>
+      </div>
     </section>
 
     <div class="toolbar">

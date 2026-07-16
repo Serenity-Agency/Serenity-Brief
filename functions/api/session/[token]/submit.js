@@ -56,7 +56,14 @@ export async function onRequestPost({ params, request, env }) {
   // Mark session as submitted so duplicate submits are blocked
   const now = new Date().toISOString();
   const submissionId = payload.submissionId || result.submissionId || null;
-  const updated = { ...session, status: "submitted", submissionId, updatedAt: now };
+  const updated = {
+    ...session,
+    status: "submitted",
+    submissionId,
+    submittedAt: now,
+    updatedAt: now,
+    submittedBrief: buildSubmittedBriefSnapshot(payload, result, session, submissionId, now)
+  };
 
   await env.SESSIONS.put(`session:${token}`, JSON.stringify(updated), {
     expirationTtl: 31_536_000
@@ -96,4 +103,57 @@ function json(value, status = 200) {
       "Cache-Control": "no-store"
     }
   });
+}
+
+function buildSubmittedBriefSnapshot(payload, result, session, submissionId, submittedAt) {
+  const sections = Array.isArray(payload.sections) ? payload.sections : [];
+  return {
+    brief_id: submissionId || payload.submissionId || result.submissionId || session.token,
+    brief_type: payload.briefId || session.briefId || "",
+    brief_title: payload.briefTitle || "",
+    client_name: payload.companyName || session.clientName || "",
+    client_site: payload.companySite || payload.site || "",
+    geography: payload.geography || "",
+    services: extractServices(payload, sections),
+    products: extractAnswer(sections, ["товар", "услуг", "продукт"]),
+    goals: payload.request || payload.goal || extractAnswer(sections, ["задач", "цель", "результат"]),
+    budget: payload.budget || extractAnswer(sections, ["бюджет"]),
+    competitors: splitList(extractAnswer(sections, ["конкурент"])),
+    audience: extractAnswer(sections, ["аудитор"]),
+    timeline: extractAnswer(sections, ["срок"]),
+    comments: payload.comment || extractAnswer(sections, ["комментар", "дополнительно"]),
+    document_url: result.documentUrl || "",
+    amocrm_url: session.amoUrl || "",
+    submitted_at: submittedAt,
+    submitted: true,
+    status: "submitted"
+  };
+}
+
+function extractServices(payload, sections) {
+  const values = [payload.briefTitle, payload.briefId, extractAnswer(sections, ["услуг", "направлен"])]
+    .filter(Boolean)
+    .join(", ");
+  return splitList(values);
+}
+
+function extractAnswer(sections, needles) {
+  for (const section of sections) {
+    for (const field of section.fields || []) {
+      const label = String(field.label || field.title || "").toLowerCase();
+      if (needles.some((needle) => label.includes(needle))) {
+        const value = Array.isArray(field.value) ? field.value.join(", ") : field.value;
+        if (String(value || "").trim()) return String(value).trim();
+      }
+    }
+  }
+  return "";
+}
+
+function splitList(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return String(value || "")
+    .split(/[,;\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
