@@ -1,6 +1,34 @@
+// GET  /api/admin/sessions → list personal client brief links.
 // POST /api/admin/sessions → create a personal client brief link.
 
 import { getAdminUser } from "../../../lib/admin-user.js";
+
+export async function onRequestGet({ request, env }) {
+  const user = await getAdminUser(request, env);
+  if (!user.ok) return json(user, user.status);
+
+  if (!env.SESSIONS) {
+    return json({ ok: false, message: "Сервис недоступен." }, 503);
+  }
+
+  const sessions = [];
+  const origin = new URL(request.url).origin;
+  let cursor;
+  do {
+    const listed = await env.SESSIONS.list({ prefix: "session:", cursor, limit: 100 });
+    cursor = listed.cursor;
+    for (const key of listed.keys || []) {
+      const raw = await env.SESSIONS.get(key.name);
+      if (!raw) continue;
+      const session = JSON.parse(raw);
+      if (session.createdByEmail && session.createdByEmail !== user.email) continue;
+      sessions.push(sessionSummary(session, origin));
+    }
+  } while (cursor);
+
+  sessions.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  return json({ ok: true, sessions });
+}
 
 export async function onRequestPost({ request, env }) {
   const user = await getAdminUser(request, env);
@@ -29,6 +57,7 @@ export async function onRequestPost({ request, env }) {
 
   const token = crypto.randomUUID();
   const now = new Date().toISOString();
+  const origin = new URL(request.url).origin;
   const session = {
     v: 1,
     token,
@@ -39,6 +68,7 @@ export async function onRequestPost({ request, env }) {
     amoUrl: amoUrl.slice(0, 500) || null,
     amoDealId: amoDealId || null,
     status: "draft",
+    url: `${origin}/?session=${token}`,
     answers: {},
     submissionId: null,
     createdAt: now,
@@ -49,8 +79,7 @@ export async function onRequestPost({ request, env }) {
     expirationTtl: 31_536_000
   });
 
-  const origin = new URL(request.url).origin;
-  return json({ ok: true, token, url: `${origin}/?session=${token}` }, 201);
+  return json({ ok: true, token, url: session.url, session: sessionSummary(session, origin) }, 201);
 }
 
 function extractAmoDealId(url) {
@@ -66,4 +95,26 @@ function json(value, status = 200) {
       "Cache-Control": "no-store"
     }
   });
+}
+
+function sessionSummary(session, origin = "") {
+  const status = session.status === "submitted"
+    ? "filled"
+    : (session.status === "opened" ? "opened" : "created");
+  return {
+    token: session.token,
+    briefId: session.briefId,
+    briefTitle: session.briefTitle || "",
+    clientName: session.clientName || "",
+    createdBy: session.createdBy || "",
+    createdByEmail: session.createdByEmail || "",
+    amoUrl: session.amoUrl || "",
+    amoDealId: session.amoDealId || "",
+    status,
+    submissionId: session.submissionId || null,
+    createdAt: session.createdAt || "",
+    updatedAt: session.updatedAt || "",
+    url: session.url || (origin && session.token ? `${origin}/?session=${session.token}` : null),
+    portalWorkspace: session.portalWorkspace || null
+  };
 }

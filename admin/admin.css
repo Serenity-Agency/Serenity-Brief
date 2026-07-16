@@ -69,6 +69,81 @@ button { cursor: pointer; }
 .create-card h1 { font-size: 18px; margin-bottom: 4px; }
 .create-card p { color: var(--muted); font-size: 13px; max-width: 560px; }
 
+.link-workflow {
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.workflow-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.workflow-head h2 { font-size: 16px; margin-bottom: 3px; }
+.workflow-head p { color: var(--muted); font-size: 12px; }
+
+.session-list { display: flex; flex-direction: column; gap: 8px; }
+.session-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+}
+
+.session-main,
+.session-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.session-main strong { font-size: 14px; }
+.session-main small,
+.session-meta span,
+.session-meta a {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.session-meta {
+  align-items: flex-end;
+  min-width: 190px;
+}
+
+.session-meta a { text-decoration: none; }
+.session-meta a:hover { color: var(--text); }
+
+.btn-small {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.s-created { background: rgba(118,85,255,.14); color: #b9a9ff; }
+.s-opened { background: rgba(210,154,98,.15); color: #d29a62; }
+.s-filled { background: rgba(74,198,139,.14); color: #6de2a7; }
+
+.empty-links {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+
+.state-msg.compact { padding: 18px 0; }
+.session-message { min-height: 16px; text-align: right; }
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -349,6 +424,15 @@ body.panel-open { overflow: hidden; }
   .current-user { width: 100%; margin-left: 0; }
   .main { padding: 16px 14px 48px; }
   .create-card { align-items: stretch; flex-direction: column; gap: 14px; }
+  .workflow-head,
+  .session-card {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+  .session-meta {
+    align-items: stretch;
+    min-width: 0;
+  }
   .toolbar { flex-direction: column; align-items: stretch; }
   .search-input { width: 100%; border-radius: 7px; }
   .toolbar-end { width: 100%; margin-left: 0; }

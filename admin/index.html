@@ -28,10 +28,23 @@
 
     <section class="create-card">
       <div>
-        <h1>Ссылки для клиентов</h1>
-        <p>Персональная ссылка сохраняет черновик клиента и закрепляет заявку за менеджером.</p>
+        <h1>Создать ссылку на бриф</h1>
+        <p>Создайте персональную ссылку, дождитесь заполнения и откройте Workspace в Presale Portal.</p>
       </div>
       <button id="btn-open-create" class="btn-primary">+ Создать персональную ссылку</button>
+    </section>
+
+    <section class="link-workflow">
+      <div class="workflow-head">
+        <div>
+          <h2>Персональные ссылки</h2>
+          <p>Маршрут менеджера: ссылка → заполненный бриф → Workspace → Presale Decision.</p>
+        </div>
+        <button id="btn-refresh-sessions" class="btn-secondary" type="button">Обновить</button>
+      </div>
+      <div id="session-list" class="session-list">
+        <div class="state-msg">Загрузка ссылок…</div>
+      </div>
     </section>
 
     <div class="toolbar">
