@@ -144,6 +144,15 @@ button { cursor: pointer; }
   font-size: 12px;
 }
 
+.soft-warning {
+  width: max-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(210,154,98,.14);
+  color: #d8aa77;
+  font-size: 11px;
+}
+
 .session-meta {
   align-items: flex-end;
   min-width: 190px;
@@ -177,6 +186,51 @@ button { cursor: pointer; }
   width: 100%;
   text-align: center;
   font-size: 12px;
+}
+
+.brief-journal {
+  padding: 16px 18px;
+  border: 1px solid rgba(42,42,56,.72);
+  border-radius: 12px;
+  background: rgba(23,23,29,.72);
+}
+
+.brief-journal.is-collapsed {
+  background: transparent;
+}
+
+.journal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.journal-head h2 {
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+
+.journal-head p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.journal-body {
+  margin-top: 16px;
+}
+
+.toggle-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toggle-inline input {
+  accent-color: var(--accent);
 }
 
 .toolbar {

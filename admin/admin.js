@@ -27,6 +27,8 @@ const BRIEF_TITLE_TO_ID = Object.fromEntries(BRIEFS.map(function (item) { return
 let briefs = [];
 let briefSessions = [];
 let sessionFilter = "action_required";
+let journalOpen = false;
+let showAllBriefs = false;
 let currentFilter = "all";
 let currentSearch = "";
 let currentId = null;
@@ -43,6 +45,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     initPanel();
     initCreateModal();
     initSessionFilters();
+    initJournalControls();
     var refreshBtn = el("btn-refresh");
     if (refreshBtn) refreshBtn.addEventListener("click", loadBriefs);
     var sessionRefreshBtn = el("btn-refresh-sessions");
@@ -124,6 +127,7 @@ async function loadBriefs() {
     renderLoadedAt();
     renderStats();
     renderList();
+    renderSessions();
   } catch (err) {
     hide("loading");
     showError(err.message || "Не удалось загрузить заявки.");
@@ -138,7 +142,7 @@ async function loadSessions() {
   var button = el("btn-refresh-sessions");
   if (!list) return;
   if (button) button.disabled = true;
-  list.innerHTML = '<div class="state-msg compact">Загрузка ссылок…</div>';
+  list.innerHTML = '<div class="state-msg compact">Загрузка запросов…</div>';
 
   try {
     const res = await fetch("/api/admin/sessions");
@@ -166,7 +170,9 @@ async function patchBrief(submissionId, updates) {
 
 function getFiltered() {
   const q = currentSearch.toLowerCase();
+  const represented = representedSubmissionIds();
   return briefs.filter(function (b) {
+    if (!showAllBriefs && represented.has(String(b.submissionId || ""))) return false;
     if (currentFilter === "new") { if (b.status !== "Новая") return false; }
     else if (currentFilter === "mine") { if (!currentUser || b.responsible !== currentUser.name) return false; }
     else if (currentFilter === "test") { if (b.status !== "Тест") return false; }
@@ -190,6 +196,22 @@ function renderStats() {
 }
 
 function renderList() {
+  var body = el("journal-body");
+  var root = el("brief-journal");
+  var toggle = el("btn-toggle-journal");
+  if (body && root && toggle) {
+    body.classList.toggle("hidden", !journalOpen);
+    root.classList.toggle("is-collapsed", !journalOpen);
+    toggle.textContent = journalOpen ? "Свернуть журнал" : "Развернуть журнал";
+  }
+  if (!journalOpen) {
+    hide("loading");
+    hide("error");
+    hide("empty");
+    hide("list");
+    return;
+  }
+
   const items = getFiltered().slice().sort(function (a, b) {
     return parseDate(b.date) - parseDate(a.date);
   });
@@ -232,15 +254,22 @@ function renderSessions() {
   var list = el("session-list");
   if (!list) return;
   renderSessionCounts();
-  var sessions = filteredSessions();
-  if (!sessions.length) {
+  var requests = filteredRequestCards();
+  if (!requests.length) {
     list.innerHTML = '<div class="empty-links">' + esc(emptySessionMessage()) + '</div>';
     return;
   }
 
-  list.innerHTML = sessions.slice(0, 12).map(function (session) {
-    var status = sessionStatus(session);
+  list.innerHTML = requests.slice(0, 12).map(function (request) {
+    var session = request.session;
+    var brief = request.brief;
+    var status = sessionStatus(request);
     var portal = session.portalWorkspace || null;
+    var title = requestTitle(request);
+    var titleNote = requestTitleNote(request);
+    var titleWarning = hasNameMismatch(request)
+      ? '<span class="soft-warning">Проверьте название</span>'
+      : "";
     var mainAction = "";
     var managementAction = "";
     if (session.archived) {
@@ -250,7 +279,7 @@ function renderSessions() {
     } else if (portal && portal.workspace_url) {
       mainAction = '<a class="btn-action btn-small" href="' + esc(portal.workspace_url) + '" target="_blank" rel="noopener noreferrer">Открыть Workspace</a>';
       managementAction = '<button class="btn-text btn-small-text" type="button" data-archive-session="' + esc(session.token) + '">Архивировать</button>';
-    } else if (session.status === "filled") {
+    } else if (isFilledRequest(request)) {
       mainAction = '<button class="btn-primary btn-small" type="button" data-portal-token="' + esc(session.token) + '">Создать Workspace</button>';
       managementAction = '<button class="btn-text btn-small-text" type="button" data-archive-session="' + esc(session.token) + '">Архивировать</button>';
     } else {
@@ -261,13 +290,16 @@ function renderSessions() {
       '<article class="session-card" data-session-token="' + esc(session.token) + '">' +
         '<div class="session-main">' +
           '<span class="badge ' + esc(status.className) + '">' + esc(status.label) + '</span>' +
-          '<strong>' + esc(session.clientName || "Без названия") + '</strong>' +
+          '<strong>' + esc(title) + '</strong>' +
+          titleWarning +
+          (titleNote ? '<small>' + esc(titleNote) + '</small>' : "") +
           '<small>' + esc(briefLabel(session.briefId, session.briefTitle)) + '</small>' +
-          '<small>Ответственный: ' + esc(session.createdBy || "не указан") + '</small>' +
+          '<small>Ответственный: ' + esc((brief && brief.responsible) || session.createdBy || "не указан") + '</small>' +
         '</div>' +
         '<div class="session-meta">' +
           '<span>' + esc(formatDateTime(session.createdAt)) + '</span>' +
-          (session.amoUrl ? '<a href="' + esc(session.amoUrl) + '" target="_blank" rel="noopener noreferrer">amoCRM</a>' : '<span>amoCRM не указан</span>') +
+          (brief && brief.docUrl ? '<a href="' + esc(brief.docUrl) + '" target="_blank" rel="noopener noreferrer">Google Doc</a>' : "") +
+          (sessionAmoUrl(request) ? '<a href="' + esc(sessionAmoUrl(request)) + '" target="_blank" rel="noopener noreferrer">amoCRM</a>' : '<span>amoCRM не указан</span>') +
           mainAction +
           managementAction +
           '<span class="session-message" data-session-message="' + esc(session.token) + '"></span>' +
@@ -299,18 +331,29 @@ function renderSessions() {
   });
 }
 
-function filteredSessions() {
-  return briefSessions.filter(function (session) {
-    if (sessionFilter === "archive") return Boolean(session.archived);
-    if (session.archived) return false;
-    if (sessionFilter === "waiting_client") return isWaitingClient(session);
-    return isActionRequired(session);
+function requestCards() {
+  return briefSessions.map(function (session) {
+    return { session: session, brief: getSessionBrief(session) };
   });
 }
 
+function filteredRequestCards() {
+  return requestCards().filter(function (request) {
+    if (sessionFilter === "archive") return Boolean(request.session.archived);
+    if (request.session.archived) return false;
+    if (sessionFilter === "waiting_client") return isWaitingClient(request);
+    return isActionRequired(request);
+  });
+}
+
+function filteredSessions() {
+  return filteredRequestCards().map(function (request) { return request.session; });
+}
+
 function renderSessionCounts() {
-  setText("count-action-required", briefSessions.filter(function (session) { return !session.archived && isActionRequired(session); }).length);
-  setText("count-waiting-client", briefSessions.filter(function (session) { return !session.archived && isWaitingClient(session); }).length);
+  var requests = requestCards();
+  setText("count-action-required", requests.filter(function (request) { return !request.session.archived && isActionRequired(request); }).length);
+  setText("count-waiting-client", requests.filter(function (request) { return !request.session.archived && isWaitingClient(request); }).length);
   setText("count-archive", briefSessions.filter(function (session) { return session.archived; }).length);
 }
 
@@ -320,19 +363,57 @@ function emptySessionMessage() {
   return "Нет карточек, требующих действий.";
 }
 
-function isActionRequired(session) {
-  return session.status === "filled" || Boolean(session.portalWorkspace && session.portalWorkspace.workspace_url);
+function isActionRequired(request) {
+  return isFilledRequest(request) || Boolean(request.session.portalWorkspace && request.session.portalWorkspace.workspace_url);
 }
 
-function isWaitingClient(session) {
-  return session.status !== "filled" && !(session.portalWorkspace && session.portalWorkspace.workspace_url);
+function isWaitingClient(request) {
+  return !isFilledRequest(request) && !(request.session.portalWorkspace && request.session.portalWorkspace.workspace_url);
 }
 
-function sessionStatus(session) {
+function sessionStatus(request) {
+  var session = request.session;
   if (session.archived) return { label: "архив", className: "s-archived" };
   if (session.portalWorkspace && session.portalWorkspace.workspace_url) return { label: "Workspace создан", className: "s-filled" };
-  if (session.status === "filled") return { label: "заполнена", className: "s-filled" };
+  if (isFilledRequest(request)) return { label: "бриф заполнен", className: "s-filled" };
   return { label: "Ожидает заполнения", className: "s-created" };
+}
+
+function isFilledRequest(request) {
+  return request.session.status === "filled" || Boolean(request.brief);
+}
+
+function getSessionBrief(session) {
+  var id = String(session && session.submissionId || "");
+  if (!id) return null;
+  return briefs.find(function (brief) { return String(brief.submissionId || "") === id; }) || null;
+}
+
+function representedSubmissionIds() {
+  return new Set(briefSessions
+    .map(function (session) { return String(session.submissionId || ""); })
+    .filter(Boolean));
+}
+
+function requestTitle(request) {
+  if (request.brief && request.brief.company) return request.brief.company;
+  return request.session.clientName || "Без названия";
+}
+
+function requestTitleNote(request) {
+  if (!request.brief) return "";
+  var workingName = request.session.clientName || "";
+  if (!workingName) return "";
+  return "Рабочее название: " + workingName;
+}
+
+function hasNameMismatch(request) {
+  return Boolean(request.brief && request.brief.company && request.session.clientName
+    && normalizeName(request.brief.company) !== normalizeName(request.session.clientName));
+}
+
+function sessionAmoUrl(request) {
+  return request.session.amoUrl || (request.brief && request.brief.amoLink) || "";
 }
 
 function briefLabel(briefId, briefTitle) {
@@ -470,6 +551,24 @@ function initSessionFilters() {
   });
 }
 
+function initJournalControls() {
+  var toggle = el("btn-toggle-journal");
+  var showAll = el("show-all-briefs");
+  if (toggle) {
+    toggle.addEventListener("click", function () {
+      journalOpen = !journalOpen;
+      renderList();
+    });
+  }
+  if (showAll) {
+    showAll.addEventListener("change", function () {
+      showAllBriefs = Boolean(showAll.checked);
+      renderList();
+    });
+  }
+  renderList();
+}
+
 function initSearch() {
   el("search").addEventListener("input", function (event) {
     currentSearch = event.target.value.trim();
@@ -583,6 +682,7 @@ async function saveChanges() {
     updateDirtyState();
     setMessage("save-msg", "Сохранено ✓");
     renderList();
+    renderSessions();
     const amoButton = el("btn-amo");
     if (isHttpUrl(amoLink)) {
       amoButton.href = amoLink;
@@ -627,6 +727,7 @@ async function toggleTest() {
     setMessage("test-msg", "Готово ✓");
     renderStats();
     renderList();
+    renderSessions();
   } catch (err) {
     setMessage("test-msg", err.message, true);
   } finally {

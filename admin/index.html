@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Входящие брифы — Serenity</title>
+  <title>Очередь запросов — Serenity</title>
   <meta name="app-build" content="__APP_BUILD__">
   <link rel="stylesheet" href="./admin.css">
 </head>
@@ -11,7 +11,7 @@
   <header class="header">
     <span class="header-brand">serenity</span>
     <span class="header-sep">·</span>
-    <span class="header-title">Входящие брифы</span>
+    <span class="header-title">Очередь запросов</span>
     <span id="current-user" class="current-user">Проверяем доступ…</span>
     <a href="/cdn-cgi/access/logout" class="btn-logout">Выйти</a>
   </header>
@@ -37,8 +37,8 @@
     <section class="link-workflow">
       <div class="workflow-head">
         <div>
-          <h2>Персональные ссылки</h2>
-          <p>По умолчанию здесь только карточки, где менеджеру нужно выполнить действие.</p>
+          <h2>Очередь запросов</h2>
+          <p>Один клиентский запрос остается одной карточкой: ссылка, заполненный бриф и Workspace показываются как этапы работы.</p>
         </div>
         <button id="btn-refresh-sessions" class="btn-secondary" type="button">Обновить</button>
       </div>
@@ -48,29 +48,45 @@
         <button class="session-filter" type="button" data-session-filter="archive">Архив <span id="count-archive">0</span></button>
       </div>
       <div id="session-list" class="session-list">
-        <div class="state-msg">Загрузка ссылок…</div>
+        <div class="state-msg">Загрузка запросов…</div>
       </div>
     </section>
 
-    <div class="toolbar">
-      <div class="filters" id="filters">
-        <button class="filter active" data-filter="all">Все</button>
-        <button class="filter" data-filter="new">Новые</button>
-        <button class="filter" data-filter="mine" id="filter-mine" disabled>Мои</button>
-        <button class="filter" data-filter="test">Тест</button>
+    <section id="brief-journal" class="brief-journal is-collapsed">
+      <div class="journal-head">
+        <div>
+          <h2>Журнал брифов</h2>
+          <p>История полученных брифов. Рабочие запросы ведутся в очереди выше.</p>
+        </div>
+        <button id="btn-toggle-journal" class="btn-secondary" type="button">Развернуть журнал</button>
       </div>
-      <div class="toolbar-end">
-        <input id="search" class="search-input" type="search" placeholder="Поиск по компании, имени, контакту…" autocomplete="off">
-        <span id="loaded-at" class="loaded-at"></span>
-        <button id="btn-refresh" class="btn-refresh" title="Обновить список" aria-label="Обновить список">↻</button>
-        <div class="stats" id="stats"></div>
-      </div>
-    </div>
 
-    <div id="loading" class="state-msg">Загрузка заявок…</div>
-    <div id="error" class="state-msg state-error hidden"></div>
-    <div id="empty" class="state-msg hidden"></div>
-    <div id="list" class="list"></div>
+      <div id="journal-body" class="journal-body hidden">
+        <div class="toolbar">
+          <div class="filters" id="filters">
+            <button class="filter active" data-filter="all">Все</button>
+            <button class="filter" data-filter="new">Новые</button>
+            <button class="filter" data-filter="mine" id="filter-mine" disabled>Мои</button>
+            <button class="filter" data-filter="test">Тест</button>
+          </div>
+          <div class="toolbar-end">
+            <label class="toggle-inline">
+              <input id="show-all-briefs" type="checkbox">
+              <span>Показать все</span>
+            </label>
+            <input id="search" class="search-input" type="search" placeholder="Поиск по компании, имени, контакту…" autocomplete="off">
+            <span id="loaded-at" class="loaded-at"></span>
+            <button id="btn-refresh" class="btn-refresh" title="Обновить список" aria-label="Обновить список">↻</button>
+            <div class="stats" id="stats"></div>
+          </div>
+        </div>
+
+        <div id="loading" class="state-msg">Загрузка заявок…</div>
+        <div id="error" class="state-msg state-error hidden"></div>
+        <div id="empty" class="state-msg hidden"></div>
+        <div id="list" class="list"></div>
+      </div>
+    </section>
   </main>
 
   <div id="overlay" class="overlay hidden"></div>
