@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 
 import { onRequestPost as createPortalWorkspace } from "../functions/api/admin/portal-workspaces.js";
+import {
+  onRequestDelete as deleteSession,
+  onRequestPatch as archiveSession
+} from "../functions/api/admin/sessions.js";
 
 const originalFetch = globalThis.fetch;
 
@@ -10,9 +14,87 @@ try {
   await testUnsubmittedBriefIsBlocked();
   await testPortalUnavailableDoesNotUpdateSession();
   await testCyrillicClientPayloadIsSent();
+  await testDeleteUnfilledUnlinkedSession();
+  await testDeleteOneSessionDoesNotTouchSecondClientLink();
+  await testDeleteSubmittedSessionIsBlocked();
+  await testArchiveSubmittedSession();
   console.log("Portal integration tests passed");
 } finally {
   globalThis.fetch = originalFetch;
+}
+
+async function testDeleteUnfilledUnlinkedSession() {
+  const deleted = [];
+  const env = integrationEnv({
+    session: { token: "token-1", status: "opened", createdByEmail: "anna@serenity.agency" },
+    delete: async (key) => deleted.push(key)
+  });
+
+  const response = await deleteSession({
+    request: accessRequest({ token: "token-1" }, "DELETE", "https://brief.test/api/admin/sessions"),
+    env
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.deleted, true);
+  assert.deepEqual(deleted, ["session:token-1"]);
+}
+
+async function testDeleteOneSessionDoesNotTouchSecondClientLink() {
+  const deleted = [];
+  const env = integrationEnv({
+    session: { token: "token-1", status: "created", clientName: "Same Client", createdByEmail: "anna@serenity.agency" },
+    delete: async (key) => deleted.push(key)
+  });
+
+  const response = await deleteSession({
+    request: accessRequest({ token: "token-1" }, "DELETE", "https://brief.test/api/admin/sessions"),
+    env
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(deleted, ["session:token-1"]);
+  assert.ok(!deleted.includes("session:token-2"));
+}
+
+
+async function testDeleteSubmittedSessionIsBlocked() {
+  const deleted = [];
+  const env = integrationEnv({
+    session: submittedSession(),
+    delete: async (key) => deleted.push(key)
+  });
+
+  const response = await deleteSession({
+    request: accessRequest({ token: "token-1" }, "DELETE", "https://brief.test/api/admin/sessions"),
+    env
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(body.ok, false);
+  assert.equal(deleted.length, 0);
+}
+
+async function testArchiveSubmittedSession() {
+  const writes = [];
+  const env = integrationEnv({
+    session: submittedSession(),
+    put: async (key, value) => writes.push([key, JSON.parse(value)])
+  });
+
+  const response = await archiveSession({
+    request: accessRequest({ token: "token-1", action: "archive" }, "PATCH", "https://brief.test/api/admin/sessions"),
+    env
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.session.archived, true);
+  assert.equal(writes.length, 1);
+  assert.ok(writes[0][1].archivedAt);
 }
 
 async function testSubmittedBriefCreatesWorkspace() {
@@ -146,7 +228,7 @@ async function testCyrillicClientPayloadIsSent() {
   assert.equal(received.client_name, "ООО Эко-Сервис");
 }
 
-function integrationEnv({ session, portalResponse, fetchImpl, put, captureBody } = {}) {
+function integrationEnv({ session, portalResponse, fetchImpl, put, delete: deleteFn, captureBody } = {}) {
   globalThis.fetch = async (url, options = {}) => {
     if (String(url).includes("/cdn-cgi/access/get-identity")) {
       return new Response(JSON.stringify({ email: "anna@serenity.agency" }), {
@@ -171,7 +253,8 @@ function integrationEnv({ session, portalResponse, fetchImpl, put, captureBody }
     PRESALE_PORTAL_IMPORT_TOKEN: "import-token",
     SESSIONS: {
       get: async (key) => key === "session:token-1" ? JSON.stringify(session) : null,
-      put: put || (async () => {})
+      put: put || (async () => {}),
+      delete: deleteFn || (async () => {})
     }
   };
 }
@@ -192,14 +275,14 @@ function submittedSession(overrides = {}) {
   };
 }
 
-function accessRequest(body) {
+function accessRequest(body, method = "POST", url = "https://brief.test/api/admin/portal-workspaces") {
   const headers = new Headers({
     "Content-Type": "application/json",
     "CF-Access-Jwt-Assertion": "verified-jwt",
     "Cookie": "CF_Authorization=session-cookie"
   });
-  return new Request("https://brief.test/api/admin/portal-workspaces", {
-    method: "POST",
+  return new Request(url, {
+    method,
     headers,
     body: JSON.stringify(body)
   });

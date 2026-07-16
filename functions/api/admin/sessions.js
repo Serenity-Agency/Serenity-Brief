@@ -1,5 +1,7 @@
-// GET  /api/admin/sessions → list personal client brief links.
-// POST /api/admin/sessions → create a personal client brief link.
+// GET    /api/admin/sessions → list personal client brief links.
+// POST   /api/admin/sessions → create a personal client brief link.
+// PATCH  /api/admin/sessions → archive a submitted or linked personal link.
+// DELETE /api/admin/sessions → delete an unfilled unlinked personal link.
 
 import { getAdminUser } from "../../../lib/admin-user.js";
 
@@ -82,9 +84,78 @@ export async function onRequestPost({ request, env }) {
   return json({ ok: true, token, url: session.url, session: sessionSummary(session, origin) }, 201);
 }
 
+export async function onRequestPatch({ request, env }) {
+  const user = await getAdminUser(request, env);
+  if (!user.ok) return json(user, user.status);
+  if (!env.SESSIONS) return json({ ok: false, message: "Сервис недоступен." }, 503);
+
+  const body = await readJson(request);
+  const token = String(body.token || "").trim();
+  if (!token || body.action !== "archive") {
+    return json({ ok: false, message: "Некорректное действие." }, 400);
+  }
+
+  const loaded = await loadOwnedSession(env, token, user);
+  if (!loaded.ok) return json(loaded, loaded.status);
+
+  const session = loaded.session;
+  if (session.status !== "submitted" && !session.portalWorkspace?.workspace_url) {
+    return json({ ok: false, message: "Незаполненную ссылку можно удалить, а не архивировать." }, 409);
+  }
+
+  const updated = {
+    ...session,
+    archivedAt: new Date().toISOString(),
+    archivedBy: user.email,
+    updatedAt: new Date().toISOString()
+  };
+  await env.SESSIONS.put(loaded.key, JSON.stringify(updated), { expirationTtl: 31_536_000 });
+  return json({ ok: true, session: sessionSummary(updated, new URL(request.url).origin) });
+}
+
+export async function onRequestDelete({ request, env }) {
+  const user = await getAdminUser(request, env);
+  if (!user.ok) return json(user, user.status);
+  if (!env.SESSIONS) return json({ ok: false, message: "Сервис недоступен." }, 503);
+
+  const body = await readJson(request);
+  const token = String(body.token || "").trim();
+  if (!token) return json({ ok: false, message: "Выберите ссылку." }, 400);
+
+  const loaded = await loadOwnedSession(env, token, user);
+  if (!loaded.ok) return json(loaded, loaded.status);
+
+  const session = loaded.session;
+  if (session.status === "submitted" || session.portalWorkspace?.workspace_url) {
+    return json({ ok: false, message: "Заполненный бриф нельзя удалить. Перенесите карточку в архив." }, 409);
+  }
+
+  await env.SESSIONS.delete(loaded.key);
+  return json({ ok: true, deleted: true, token });
+}
+
 function extractAmoDealId(url) {
   const match = String(url || "").match(/\/leads\/detail\/(\d+)/);
   return match ? match[1] : null;
+}
+
+async function readJson(request) {
+  try {
+    return await request.json();
+  } catch {
+    return {};
+  }
+}
+
+async function loadOwnedSession(env, token, user) {
+  const key = `session:${token}`;
+  const raw = await env.SESSIONS.get(key);
+  if (!raw) return { ok: false, status: 404, message: "Персональная ссылка не найдена." };
+  const session = JSON.parse(raw);
+  if (session.createdByEmail && session.createdByEmail !== user.email) {
+    return { ok: false, status: 403, message: "Эта ссылка закреплена за другим менеджером." };
+  }
+  return { ok: true, key, session };
 }
 
 function json(value, status = 200) {
@@ -115,6 +186,8 @@ function sessionSummary(session, origin = "") {
     createdAt: session.createdAt || "",
     updatedAt: session.updatedAt || "",
     url: session.url || (origin && session.token ? `${origin}/?session=${session.token}` : null),
-    portalWorkspace: session.portalWorkspace || null
+    portalWorkspace: session.portalWorkspace || null,
+    archived: Boolean(session.archivedAt),
+    archivedAt: session.archivedAt || null
   };
 }

@@ -26,6 +26,7 @@ const BRIEF_TITLE_TO_ID = Object.fromEntries(BRIEFS.map(function (item) { return
 
 let briefs = [];
 let briefSessions = [];
+let sessionFilter = "action_required";
 let currentFilter = "all";
 let currentSearch = "";
 let currentId = null;
@@ -33,6 +34,7 @@ let loadedAt = null;
 let savedPanelState = "";
 let closeAfterConfirm = null;
 let currentUser = null;
+let pendingDuplicatePayload = null;
 
 document.addEventListener("DOMContentLoaded", async function () {
   try {
@@ -40,6 +42,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     initSearch();
     initPanel();
     initCreateModal();
+    initSessionFilters();
     var refreshBtn = el("btn-refresh");
     if (refreshBtn) refreshBtn.addEventListener("click", loadBriefs);
     var sessionRefreshBtn = el("btn-refresh-sessions");
@@ -228,21 +231,31 @@ function renderList() {
 function renderSessions() {
   var list = el("session-list");
   if (!list) return;
-  if (!briefSessions.length) {
-    list.innerHTML = '<div class="empty-links">Пока нет персональных ссылок. Создайте первую ссылку для клиента.</div>';
+  renderSessionCounts();
+  var sessions = filteredSessions();
+  if (!sessions.length) {
+    list.innerHTML = '<div class="empty-links">' + esc(emptySessionMessage()) + '</div>';
     return;
   }
 
-  list.innerHTML = briefSessions.slice(0, 12).map(function (session) {
-    var status = sessionStatus(session.status);
+  list.innerHTML = sessions.slice(0, 12).map(function (session) {
+    var status = sessionStatus(session);
     var portal = session.portalWorkspace || null;
-    var action = "";
-    if (portal && portal.workspace_url) {
-      action = '<a class="btn-action btn-small" href="' + esc(portal.workspace_url) + '" target="_blank" rel="noopener noreferrer">Открыть в Presale Portal</a>';
+    var mainAction = "";
+    var managementAction = "";
+    if (session.archived) {
+      mainAction = portal && portal.workspace_url
+        ? '<a class="btn-action btn-small" href="' + esc(portal.workspace_url) + '" target="_blank" rel="noopener noreferrer">Открыть Workspace</a>'
+        : '<button class="btn-secondary btn-small" type="button" disabled>В архиве</button>';
+    } else if (portal && portal.workspace_url) {
+      mainAction = '<a class="btn-action btn-small" href="' + esc(portal.workspace_url) + '" target="_blank" rel="noopener noreferrer">Открыть Workspace</a>';
+      managementAction = '<button class="btn-text btn-small-text" type="button" data-archive-session="' + esc(session.token) + '">Архивировать</button>';
     } else if (session.status === "filled") {
-      action = '<button class="btn-primary btn-small" type="button" data-portal-token="' + esc(session.token) + '">Создать Workspace</button>';
+      mainAction = '<button class="btn-primary btn-small" type="button" data-portal-token="' + esc(session.token) + '">Создать Workspace</button>';
+      managementAction = '<button class="btn-text btn-small-text" type="button" data-archive-session="' + esc(session.token) + '">Архивировать</button>';
     } else {
-      action = '<button class="btn-secondary btn-small" type="button" disabled>Ждём заполнения</button>';
+      mainAction = '<button class="btn-secondary btn-small" type="button" data-copy-session="' + esc(session.token) + '">Скопировать ссылку</button>';
+      managementAction = '<button class="btn-text-danger btn-small-text" type="button" data-delete-session="' + esc(session.token) + '">Удалить ссылку</button>';
     }
     return (
       '<article class="session-card" data-session-token="' + esc(session.token) + '">' +
@@ -255,8 +268,8 @@ function renderSessions() {
         '<div class="session-meta">' +
           '<span>' + esc(formatDateTime(session.createdAt)) + '</span>' +
           (session.amoUrl ? '<a href="' + esc(session.amoUrl) + '" target="_blank" rel="noopener noreferrer">amoCRM</a>' : '<span>amoCRM не указан</span>') +
-          '<button class="btn-secondary btn-small" type="button" data-copy-session="' + esc(session.token) + '">Скопировать ссылку</button>' +
-          action +
+          mainAction +
+          managementAction +
           '<span class="session-message" data-session-message="' + esc(session.token) + '"></span>' +
         '</div>' +
       '</article>'
@@ -274,12 +287,52 @@ function renderSessions() {
       createWorkspaceForSession(button.dataset.portalToken, button);
     });
   });
+  list.querySelectorAll("[data-delete-session]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      deleteSession(button.dataset.deleteSession, button);
+    });
+  });
+  list.querySelectorAll("[data-archive-session]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      archiveSession(button.dataset.archiveSession, button);
+    });
+  });
 }
 
-function sessionStatus(status) {
-  if (status === "filled") return { label: "заполнена", className: "s-filled" };
-  if (status === "opened") return { label: "открыта", className: "s-opened" };
-  return { label: "создана", className: "s-created" };
+function filteredSessions() {
+  return briefSessions.filter(function (session) {
+    if (sessionFilter === "archive") return Boolean(session.archived);
+    if (session.archived) return false;
+    if (sessionFilter === "waiting_client") return isWaitingClient(session);
+    return isActionRequired(session);
+  });
+}
+
+function renderSessionCounts() {
+  setText("count-action-required", briefSessions.filter(function (session) { return !session.archived && isActionRequired(session); }).length);
+  setText("count-waiting-client", briefSessions.filter(function (session) { return !session.archived && isWaitingClient(session); }).length);
+  setText("count-archive", briefSessions.filter(function (session) { return session.archived; }).length);
+}
+
+function emptySessionMessage() {
+  if (sessionFilter === "waiting_client") return "Нет ссылок, ожидающих заполнения клиентом.";
+  if (sessionFilter === "archive") return "В архиве пока нет ссылок.";
+  return "Нет карточек, требующих действий.";
+}
+
+function isActionRequired(session) {
+  return session.status === "filled" || Boolean(session.portalWorkspace && session.portalWorkspace.workspace_url);
+}
+
+function isWaitingClient(session) {
+  return session.status !== "filled" && !(session.portalWorkspace && session.portalWorkspace.workspace_url);
+}
+
+function sessionStatus(session) {
+  if (session.archived) return { label: "архив", className: "s-archived" };
+  if (session.portalWorkspace && session.portalWorkspace.workspace_url) return { label: "Workspace создан", className: "s-filled" };
+  if (session.status === "filled") return { label: "заполнена", className: "s-filled" };
+  return { label: "Ожидает заполнения", className: "s-created" };
 }
 
 function briefLabel(briefId, briefTitle) {
@@ -310,7 +363,7 @@ async function createWorkspaceForSession(token, button) {
       body: JSON.stringify({ token: token })
     });
     const data = await res.json().catch(function () { return {}; });
-    if (!res.ok || !data.ok) throw new Error(data.message || "Не удалось создать Workspace.");
+    if (!res.ok || !data.ok) throw new Error("Не удалось открыть Presale Portal. Попробуйте ещё раз.");
     var session = briefSessions.find(function (item) { return item.token === token; });
     if (session) {
       session.portalWorkspace = {
@@ -336,6 +389,54 @@ async function createWorkspaceForSession(token, button) {
   }
 }
 
+async function deleteSession(token, button) {
+  var session = briefSessions.find(function (item) { return item.token === token; });
+  if (!session) return;
+  if (!window.confirm("Удалить персональную ссылку? После удаления клиент не сможет открыть эту ссылку.")) return;
+  await mutateSession("/api/admin/sessions", {
+    method: "DELETE",
+    body: JSON.stringify({ token: token })
+  }, button, function () {
+    briefSessions = briefSessions.filter(function (item) { return item.token !== token; });
+    renderSessions();
+  });
+}
+
+async function archiveSession(token, button) {
+  await mutateSession("/api/admin/sessions", {
+    method: "PATCH",
+    body: JSON.stringify({ token: token, action: "archive" })
+  }, button, function (data) {
+    var session = briefSessions.find(function (item) { return item.token === token; });
+    if (session) Object.assign(session, data.session || {}, { archived: true });
+    renderSessions();
+  });
+}
+
+async function mutateSession(url, options, button, onSuccess) {
+  var original = button && button.textContent;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Сохраняю…";
+  }
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers: { "Content-Type": "application/json" }
+    });
+    const data = await res.json().catch(function () { return {}; });
+    if (!res.ok || !data.ok) throw new Error(data.message || "Не удалось сохранить изменение.");
+    onSuccess(data);
+  } catch (err) {
+    window.alert(err.message || "Не удалось сохранить изменение.");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = original;
+    }
+  }
+}
+
 function emptyMessage() {
   const q = currentSearch;
   if (q) return "Ничего не найдено по запросу «" + q + "»";
@@ -353,6 +454,19 @@ function initFilters() {
     btn.classList.add("active");
     currentFilter = btn.dataset.filter;
     renderList();
+  });
+}
+
+function initSessionFilters() {
+  var filters = el("session-filters");
+  if (!filters) return;
+  filters.addEventListener("click", function (event) {
+    var btn = event.target.closest("[data-session-filter]");
+    if (!btn) return;
+    filters.querySelectorAll(".session-filter").forEach(function (item) { item.classList.remove("active"); });
+    btn.classList.add("active");
+    sessionFilter = btn.dataset.sessionFilter || "action_required";
+    renderSessions();
   });
 }
 
@@ -556,10 +670,13 @@ function closeCreateModal() {
 
 function resetCreateForm() {
   el("create-form").reset();
+  pendingDuplicatePayload = null;
   show("create-form");
   hide("create-result");
   hide("create-error");
+  hide("create-warning");
   el("create-error").textContent = "";
+  el("create-warning").textContent = "";
   el("btn-create").disabled = false;
 }
 
@@ -572,6 +689,18 @@ async function createPersonalLink(event) {
     amoUrl: String(form.get("amoUrl") || "").trim() || undefined
   };
   if (!payload.briefId || !payload.clientName) return;
+  var duplicate = findActiveDuplicateSession(payload.clientName);
+  if (duplicate) {
+    pendingDuplicatePayload = payload;
+    showDuplicateWarning(duplicate);
+    return;
+  }
+  await submitCreatePayload(payload);
+}
+
+async function submitCreatePayload(payload) {
+  pendingDuplicatePayload = null;
+  hide("create-warning");
 
   const btn = el("btn-create");
   btn.disabled = true;
@@ -605,6 +734,46 @@ async function createPersonalLink(event) {
     btn.disabled = false;
     btn.textContent = "Создать ссылку";
   }
+}
+
+function findActiveDuplicateSession(clientName) {
+  var normalized = normalizeName(clientName);
+  if (!normalized) return null;
+  return briefSessions.find(function (session) {
+    return !session.archived
+      && session.status !== "filled"
+      && !(session.portalWorkspace && session.portalWorkspace.workspace_url)
+      && normalizeName(session.clientName) === normalized;
+  }) || null;
+}
+
+function showDuplicateWarning(session) {
+  var node = el("create-warning");
+  if (!node) return;
+  node.innerHTML = '<strong>Для этого клиента уже существует активная ссылка.</strong>' +
+    '<p>Можно открыть существующую ссылку или всё равно создать новую.</p>' +
+    '<div class="warning-actions">' +
+      '<button class="btn-secondary btn-small" type="button" id="btn-open-duplicate">Открыть существующую</button>' +
+      '<button class="btn-primary btn-small" type="button" id="btn-create-duplicate">Создать новую</button>' +
+    '</div>';
+  show("create-warning");
+  hide("create-error");
+  var openBtn = el("btn-open-duplicate");
+  var createBtn = el("btn-create-duplicate");
+  if (openBtn) {
+    openBtn.addEventListener("click", function () {
+      if (session.url) window.open(session.url, "_blank", "noopener,noreferrer");
+    }, { once: true });
+  }
+  if (createBtn) {
+    createBtn.addEventListener("click", function () {
+      if (pendingDuplicatePayload) submitCreatePayload(pendingDuplicatePayload);
+    }, { once: true });
+  }
+}
+
+function normalizeName(value) {
+  return String(value || "").toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ").trim();
 }
 
 async function copyText(text, button, successText) {
@@ -681,6 +850,10 @@ function el(id) {
   var node = document.getElementById(id);
   if (!node) console.warn("[admin] element not found: #" + id);
   return node;
+}
+function setText(id, value) {
+  var node = document.getElementById(id);
+  if (node) node.textContent = String(value);
 }
 function show(id) { var node = el(id); if (node) node.classList.remove("hidden"); }
 function hide(id) { var node = el(id); if (node) node.classList.add("hidden"); }
