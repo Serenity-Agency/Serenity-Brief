@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Входящие брифы — Serenity</title>
-  <meta name="app-build" content="9c0627f · 2026-07-16 09:15 UTC">
+  <meta name="app-build" content="f11a684 · 2026-07-16 09:46 UTC">
   <link rel="stylesheet" href="./admin.css">
 </head>
 <body>
@@ -38,9 +38,14 @@
       <div class="workflow-head">
         <div>
           <h2>Персональные ссылки</h2>
-          <p>Маршрут менеджера: ссылка → заполненный бриф → Workspace → Presale Decision.</p>
+          <p>По умолчанию здесь только карточки, где менеджеру нужно выполнить действие.</p>
         </div>
         <button id="btn-refresh-sessions" class="btn-secondary" type="button">Обновить</button>
+      </div>
+      <div id="session-filters" class="session-filters" aria-label="Фильтр персональных ссылок">
+        <button class="session-filter active" type="button" data-session-filter="action_required">Требуют действий <span id="count-action-required">0</span></button>
+        <button class="session-filter" type="button" data-session-filter="waiting_client">Ожидают клиента <span id="count-waiting-client">0</span></button>
+        <button class="session-filter" type="button" data-session-filter="archive">Архив <span id="count-archive">0</span></button>
       </div>
       <div id="session-list" class="session-list">
         <div class="state-msg">Загрузка ссылок…</div>
@@ -144,6 +149,7 @@
         <small class="field-help">Вставьте ссылку на сделку amoCRM. После отправки брифа Google Doc автоматически добавится в эту сделку.</small>
       </div>
 <p id="create-manager-note" class="manager-note"></p>
+      <div id="create-warning" class="inline-warning hidden"></div>
       <div id="create-error" class="inline-error hidden"></div>
       <div class="form-actions">
         <button id="btn-create" class="btn-primary" type="submit">Создать ссылку</button>

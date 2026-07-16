@@ -25,6 +25,8 @@ function makeEl(id) {
 for (const id of [
   "btn-open-create", "current-user", "create-manager-note", "filter-mine",
   "btn-refresh", "btn-refresh-sessions", "session-list", "loading", "error", "empty", "list",
+  "session-filters", "count-action-required", "count-waiting-client", "count-archive",
+  "create-warning", "btn-open-duplicate", "btn-create-duplicate",
   "app-error", "app-error-msg", "app-error-code", "app-error-retry",
 ]) {
   elements[id] = makeEl(id);

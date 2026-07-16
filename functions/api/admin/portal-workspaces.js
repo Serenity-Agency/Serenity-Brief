@@ -7,7 +7,7 @@ export async function onRequestPost({ request, env }) {
   if (!user.ok) return json(user, user.status);
 
   if (!env.PRESALE_PORTAL_URL || !env.PRESALE_PORTAL_IMPORT_TOKEN) {
-    return json({ ok: false, message: "Связь с Presale Portal требует настройки." }, 503);
+    return json({ ok: false, message: "Presale Portal сейчас недоступен. Попробуйте позже." }, 503);
   }
 
   let body;
