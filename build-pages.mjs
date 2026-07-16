@@ -14,6 +14,7 @@ await Promise.all([
   cp(new URL("./app.js", import.meta.url), new URL("./app.js", output)),
   stampAdminHtml(new URL("./admin/index.html", import.meta.url), new URL("./admin/index.html", output)),
   cp(new URL("./admin/admin.js", import.meta.url),   new URL("./admin/admin.js", output)),
+  cp(new URL("./admin/serenity-tokens.css", import.meta.url),  new URL("./admin/serenity-tokens.css", output)),
   cp(new URL("./admin/admin.css", import.meta.url),  new URL("./admin/admin.css", output)),
   cp(new URL("./materials/", import.meta.url), new URL("./materials/", output), { recursive: true }),
   writeFile(new URL("./_routes.json", output), JSON.stringify({
