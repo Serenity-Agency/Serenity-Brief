@@ -11,6 +11,7 @@ token*.json
 
 # Local tools, dependencies and system files
 .tools/
+.wrangler/cache/
 node_modules/
 .DS_Store
 *.log
