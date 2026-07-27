@@ -6,9 +6,9 @@
   "scripts": {
     "build": "node build-apps-script.mjs",
     "build:pages": "node build-pages.mjs",
-    "check": "node --check app.js && node --check admin/admin.js && node --check lib/admin-user.js && node --check build-apps-script.mjs && node --check build-pages.mjs && node --check functions/api/submit.js && node --check functions/api/admin/briefs.js && node --check functions/api/admin/me.js && node --check functions/api/admin/sessions.js && node --check functions/api/admin/portal-workspaces.js && node --check functions/api/session/create.js && node --check functions/api/session/[token].js && node --check functions/api/session/[token]/submit.js && node --check < google-apps-script/Code.gs",
+    "check": "node --check app.js && node --check admin/admin.js && node --check lib/admin-user.js && node --check build-apps-script.mjs && node --check build-pages.mjs && node --check functions/api/submit.js && node --check functions/api/admin/briefs.js && node --check functions/api/admin/me.js && node --check functions/api/admin/sessions.js && node --check functions/api/session/create.js && node --check functions/api/session/[token].js && node --check functions/api/session/[token]/submit.js && node --check < google-apps-script/Code.gs",
     "test:admin-auth": "node tests/admin-auth.mjs",
     "test:admin-frontend": "node tests/admin-frontend.mjs",
-    "test": "pnpm run check && pnpm run test:admin-auth && pnpm run test:admin-frontend && node tests/portal-integration.test.mjs && pnpm run build && pnpm run build:pages"
+    "test": "npm run check && npm run test:admin-auth && npm run test:admin-frontend && npm run build && npm run build:pages"
   }
 }

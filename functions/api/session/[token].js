@@ -7,14 +7,8 @@ export async function onRequestGet({ params, env }) {
 
   const session = JSON.parse(raw);
 
-  // Renew TTL so active drafts don't expire while in use and mark first client open.
-  if (session.status === "draft") {
-    session.status = "opened";
-    session.updatedAt = new Date().toISOString();
-    await env.SESSIONS.put(`session:${token}`, JSON.stringify(session), { expirationTtl: 31_536_000 });
-  } else {
-    await env.SESSIONS.put(`session:${token}`, raw, { expirationTtl: 31_536_000 });
-  }
+  // Renew TTL so active drafts don't expire while in use
+  await env.SESSIONS.put(`session:${token}`, raw, { expirationTtl: 31_536_000 });
 
   return json({
     ok: true,
