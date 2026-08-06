@@ -1,6 +1,6 @@
 :root {
-  --media-red: #b93232;
-  --media-blue: #607080;
+  --media-red: var(--stone);
+  --media-blue: var(--sage);
 }
 
 html {
@@ -9,8 +9,8 @@ html {
 
 body {
   background:
-    linear-gradient(90deg, rgba(185, 50, 50, 0.24) 0 4px, transparent 4px),
-    radial-gradient(circle at 18% 8%, rgba(96, 112, 128, 0.18), transparent 34vw),
+    linear-gradient(90deg, rgba(216, 199, 161, 0.20) 0 4px, transparent 4px),
+    radial-gradient(circle at 18% 8%, rgba(156, 169, 132, 0.18), transparent 34vw),
     radial-gradient(circle at 88% 12%, rgba(216, 199, 161, 0.12), transparent 30vw),
     linear-gradient(180deg, #111111 0%, #151414 100%);
 }
@@ -167,7 +167,7 @@ body {
   margin-left: calc((min(1260px, calc(100vw - 40px)) - 100vw) / 2);
   padding-inline: max(20px, calc((100vw - 1260px) / 2));
   background:
-    linear-gradient(90deg, rgba(185, 50, 50, 0.8) 0 4px, transparent 4px),
+    linear-gradient(90deg, rgba(216, 199, 161, 0.72) 0 4px, transparent 4px),
     repeating-linear-gradient(0deg, rgba(216, 199, 161, 0.08) 0 1px, transparent 1px 78px),
     repeating-linear-gradient(90deg, rgba(156, 169, 132, 0.08) 0 1px, transparent 1px 76px),
     #111111;
@@ -357,6 +357,16 @@ body {
 .site-footer {
   width: min(1260px, calc(100% - 40px));
   margin: 0 auto;
+  padding: 28px 0 42px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.site-footer p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.35;
 }
 
 @media (max-width: 980px) {
