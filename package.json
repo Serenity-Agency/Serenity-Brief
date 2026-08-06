@@ -9,6 +9,7 @@
     "check": "node --check app.js && node --check admin/admin.js && node --check lib/admin-user.js && node --check build-apps-script.mjs && node --check build-pages.mjs && node --check functions/api/submit.js && node --check functions/api/admin/briefs.js && node --check functions/api/admin/me.js && node --check functions/api/admin/sessions.js && node --check functions/api/session/create.js && node --check functions/api/session/[token].js && node --check functions/api/session/[token]/submit.js && node --check < google-apps-script/Code.gs",
     "test:admin-auth": "node tests/admin-auth.mjs",
     "test:admin-frontend": "node tests/admin-frontend.mjs",
-    "test": "npm run check && npm run test:admin-auth && npm run test:admin-frontend && npm run build && npm run build:pages"
+    "test:static-offers": "node tests/static-offers.mjs",
+    "test": "npm run check && npm run test:admin-auth && npm run test:admin-frontend && npm run build && npm run build:pages && npm run test:static-offers"
   }
 }
