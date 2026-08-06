@@ -7,6 +7,7 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await mkdir(new URL("./admin/", output), { recursive: true });
 await mkdir(new URL("./materials/", output), { recursive: true });
+await mkdir(new URL("./offers/", output), { recursive: true });
 
 await Promise.all([
   cp(new URL("./index.html", import.meta.url), new URL("./index.html", output)),
@@ -17,6 +18,7 @@ await Promise.all([
   cp(new URL("./admin/serenity-tokens.css", import.meta.url),  new URL("./admin/serenity-tokens.css", output)),
   cp(new URL("./admin/admin.css", import.meta.url),  new URL("./admin/admin.css", output)),
   cp(new URL("./materials/", import.meta.url), new URL("./materials/", output), { recursive: true }),
+  cp(new URL("./offers/", import.meta.url), new URL("./offers/", output), { recursive: true }),
   writeFile(new URL("./_routes.json", output), JSON.stringify({
     version: 1,
     include: ["/api/*"],
@@ -55,7 +57,15 @@ function buildHeadersFile() {
   X-Robots-Tag: noindex, nofollow
   Cache-Control: public, max-age=3600, must-revalidate`;
 
-  return `${formBlocks}\n\n${materialsBlock}\n`;
+  const offersBlock = `/offers/*
+  Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: public, max-age=3600, must-revalidate`;
+
+  return `${formBlocks}\n\n${materialsBlock}\n\n${offersBlock}\n`;
 }
 
 async function stampAdminHtml(src, dst) {
