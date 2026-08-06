@@ -25,10 +25,6 @@ const BRIEFS = [
 const BRIEF_TITLE_TO_ID = Object.fromEntries(BRIEFS.map(function (item) { return [item[1], item[0]]; }));
 
 let briefs = [];
-let briefSessions = [];
-let sessionFilter = "action_required";
-let journalOpen = false;
-let showAllBriefs = false;
 let currentFilter = "all";
 let currentSearch = "";
 let currentId = null;
@@ -36,7 +32,6 @@ let loadedAt = null;
 let savedPanelState = "";
 let closeAfterConfirm = null;
 let currentUser = null;
-let pendingDuplicatePayload = null;
 
 document.addEventListener("DOMContentLoaded", async function () {
   try {
@@ -44,12 +39,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     initSearch();
     initPanel();
     initCreateModal();
-    initSessionFilters();
-    initJournalControls();
     var refreshBtn = el("btn-refresh");
     if (refreshBtn) refreshBtn.addEventListener("click", loadBriefs);
-    var sessionRefreshBtn = el("btn-refresh-sessions");
-    if (sessionRefreshBtn) sessionRefreshBtn.addEventListener("click", loadSessions);
     var retryBtn = document.getElementById("app-error-retry");
     if (retryBtn) retryBtn.addEventListener("click", function () { window.location.reload(); });
     window.addEventListener("beforeunload", function (event) {
@@ -58,9 +49,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       event.returnValue = "";
     });
     await loadCurrentUser();
-    if (currentUser) {
-      await Promise.all([loadBriefs(), loadSessions()]);
-    }
+    if (currentUser) loadBriefs();
   } catch (err) {
     console.error("[admin] init_error:", err);
     showAppError("Не удалось загрузить интерфейс. Обновите страницу.", "init_error");
@@ -127,33 +116,12 @@ async function loadBriefs() {
     renderLoadedAt();
     renderStats();
     renderList();
-    renderSessions();
   } catch (err) {
     hide("loading");
     showError(err.message || "Не удалось загрузить заявки.");
   } finally {
     var refreshBtn = el("btn-refresh");
     if (refreshBtn) refreshBtn.disabled = false;
-  }
-}
-
-async function loadSessions() {
-  var list = el("session-list");
-  var button = el("btn-refresh-sessions");
-  if (!list) return;
-  if (button) button.disabled = true;
-  list.innerHTML = '<div class="state-msg compact">Загрузка запросов…</div>';
-
-  try {
-    const res = await fetch("/api/admin/sessions");
-    const data = await res.json().catch(function () { return {}; });
-    if (!res.ok || !data.ok) throw new Error(data.message || "Не удалось получить ссылки.");
-    briefSessions = data.sessions || [];
-    renderSessions();
-  } catch (err) {
-    list.innerHTML = '<div class="inline-error">Не удалось загрузить ссылки. Попробуйте обновить блок.</div>';
-  } finally {
-    if (button) button.disabled = false;
   }
 }
 
@@ -170,9 +138,7 @@ async function patchBrief(submissionId, updates) {
 
 function getFiltered() {
   const q = currentSearch.toLowerCase();
-  const represented = representedSubmissionIds();
   return briefs.filter(function (b) {
-    if (!showAllBriefs && represented.has(String(b.submissionId || ""))) return false;
     if (currentFilter === "new") { if (b.status !== "Новая") return false; }
     else if (currentFilter === "mine") { if (!currentUser || b.responsible !== currentUser.name) return false; }
     else if (currentFilter === "test") { if (b.status !== "Тест") return false; }
@@ -196,22 +162,6 @@ function renderStats() {
 }
 
 function renderList() {
-  var body = el("journal-body");
-  var root = el("brief-journal");
-  var toggle = el("btn-toggle-journal");
-  if (body && root && toggle) {
-    body.classList.toggle("hidden", !journalOpen);
-    root.classList.toggle("is-collapsed", !journalOpen);
-    toggle.textContent = journalOpen ? "Свернуть журнал" : "Развернуть журнал";
-  }
-  if (!journalOpen) {
-    hide("loading");
-    hide("error");
-    hide("empty");
-    hide("list");
-    return;
-  }
-
   const items = getFiltered().slice().sort(function (a, b) {
     return parseDate(b.date) - parseDate(a.date);
   });
@@ -250,274 +200,6 @@ function renderList() {
   });
 }
 
-function renderSessions() {
-  var list = el("session-list");
-  if (!list) return;
-  renderSessionCounts();
-  var requests = filteredRequestCards();
-  if (!requests.length) {
-    list.innerHTML = '<div class="empty-links">' + esc(emptySessionMessage()) + '</div>';
-    return;
-  }
-
-  list.innerHTML = requests.slice(0, 12).map(function (request) {
-    var session = request.session;
-    var brief = request.brief;
-    var status = sessionStatus(request);
-    var portal = session.portalWorkspace || null;
-    var title = requestTitle(request);
-    var titleNote = requestTitleNote(request);
-    var titleWarning = hasNameMismatch(request)
-      ? '<span class="soft-warning">Проверьте название</span>'
-      : "";
-    var mainAction = "";
-    var managementAction = "";
-    if (session.archived) {
-      mainAction = portal && portal.workspace_url
-        ? '<a class="btn-action btn-small" href="' + esc(portal.workspace_url) + '" target="_blank" rel="noopener noreferrer">Открыть Workspace</a>'
-        : '<button class="btn-secondary btn-small" type="button" disabled>В архиве</button>';
-    } else if (portal && portal.workspace_url) {
-      mainAction = '<a class="btn-action btn-small" href="' + esc(portal.workspace_url) + '" target="_blank" rel="noopener noreferrer">Открыть Workspace</a>';
-      managementAction = '<button class="btn-text btn-small-text" type="button" data-archive-session="' + esc(session.token) + '">Архивировать</button>';
-    } else if (isFilledRequest(request)) {
-      mainAction = '<button class="btn-primary btn-small" type="button" data-portal-token="' + esc(session.token) + '">Создать Workspace</button>';
-      managementAction = '<button class="btn-text btn-small-text" type="button" data-archive-session="' + esc(session.token) + '">Архивировать</button>';
-    } else {
-      mainAction = '<button class="btn-secondary btn-small" type="button" data-copy-session="' + esc(session.token) + '">Скопировать ссылку</button>';
-      managementAction = '<button class="btn-text-danger btn-small-text" type="button" data-delete-session="' + esc(session.token) + '">Удалить ссылку</button>';
-    }
-    return (
-      '<article class="session-card" data-session-token="' + esc(session.token) + '">' +
-        '<div class="session-main">' +
-          '<span class="badge ' + esc(status.className) + '">' + esc(status.label) + '</span>' +
-          '<strong>' + esc(title) + '</strong>' +
-          titleWarning +
-          (titleNote ? '<small>' + esc(titleNote) + '</small>' : "") +
-          '<small>' + esc(briefLabel(session.briefId, session.briefTitle)) + '</small>' +
-          '<small>Ответственный: ' + esc((brief && brief.responsible) || session.createdBy || "не указан") + '</small>' +
-        '</div>' +
-        '<div class="session-meta">' +
-          '<span>' + esc(formatDateTime(session.createdAt)) + '</span>' +
-          (brief && brief.docUrl ? '<a href="' + esc(brief.docUrl) + '" target="_blank" rel="noopener noreferrer">Google Doc</a>' : "") +
-          (sessionAmoUrl(request) ? '<a href="' + esc(sessionAmoUrl(request)) + '" target="_blank" rel="noopener noreferrer">amoCRM</a>' : '<span>amoCRM не указан</span>') +
-          mainAction +
-          managementAction +
-          '<span class="session-message" data-session-message="' + esc(session.token) + '"></span>' +
-        '</div>' +
-      '</article>'
-    );
-  }).join("");
-
-  list.querySelectorAll("[data-copy-session]").forEach(function (button) {
-    button.addEventListener("click", function () {
-      var session = briefSessions.find(function (item) { return item.token === button.dataset.copySession; });
-      if (session && session.url) copyText(session.url, button, "Ссылка скопирована");
-    });
-  });
-  list.querySelectorAll("[data-portal-token]").forEach(function (button) {
-    button.addEventListener("click", function () {
-      createWorkspaceForSession(button.dataset.portalToken, button);
-    });
-  });
-  list.querySelectorAll("[data-delete-session]").forEach(function (button) {
-    button.addEventListener("click", function () {
-      deleteSession(button.dataset.deleteSession, button);
-    });
-  });
-  list.querySelectorAll("[data-archive-session]").forEach(function (button) {
-    button.addEventListener("click", function () {
-      archiveSession(button.dataset.archiveSession, button);
-    });
-  });
-}
-
-function requestCards() {
-  return briefSessions.map(function (session) {
-    return { session: session, brief: getSessionBrief(session) };
-  });
-}
-
-function filteredRequestCards() {
-  return requestCards().filter(function (request) {
-    if (sessionFilter === "archive") return Boolean(request.session.archived);
-    if (request.session.archived) return false;
-    if (sessionFilter === "waiting_client") return isWaitingClient(request);
-    return isActionRequired(request);
-  });
-}
-
-function filteredSessions() {
-  return filteredRequestCards().map(function (request) { return request.session; });
-}
-
-function renderSessionCounts() {
-  var requests = requestCards();
-  setText("count-action-required", requests.filter(function (request) { return !request.session.archived && isActionRequired(request); }).length);
-  setText("count-waiting-client", requests.filter(function (request) { return !request.session.archived && isWaitingClient(request); }).length);
-  setText("count-archive", briefSessions.filter(function (session) { return session.archived; }).length);
-}
-
-function emptySessionMessage() {
-  if (sessionFilter === "waiting_client") return "Нет ссылок, ожидающих заполнения клиентом.";
-  if (sessionFilter === "archive") return "В архиве пока нет ссылок.";
-  return "Нет карточек, требующих действий.";
-}
-
-function isActionRequired(request) {
-  return isFilledRequest(request) || Boolean(request.session.portalWorkspace && request.session.portalWorkspace.workspace_url);
-}
-
-function isWaitingClient(request) {
-  return !isFilledRequest(request) && !(request.session.portalWorkspace && request.session.portalWorkspace.workspace_url);
-}
-
-function sessionStatus(request) {
-  var session = request.session;
-  if (session.archived) return { label: "архив", className: "s-archived" };
-  if (session.portalWorkspace && session.portalWorkspace.workspace_url) return { label: "Workspace создан", className: "s-filled" };
-  if (isFilledRequest(request)) return { label: "бриф заполнен", className: "s-filled" };
-  return { label: "Ожидает заполнения", className: "s-created" };
-}
-
-function isFilledRequest(request) {
-  return request.session.status === "filled" || Boolean(request.brief);
-}
-
-function getSessionBrief(session) {
-  var id = String(session && session.submissionId || "");
-  if (!id) return null;
-  return briefs.find(function (brief) { return String(brief.submissionId || "") === id; }) || null;
-}
-
-function representedSubmissionIds() {
-  return new Set(briefSessions
-    .map(function (session) { return String(session.submissionId || ""); })
-    .filter(Boolean));
-}
-
-function requestTitle(request) {
-  if (request.brief && request.brief.company) return request.brief.company;
-  return request.session.clientName || "Без названия";
-}
-
-function requestTitleNote(request) {
-  if (!request.brief) return "";
-  var workingName = request.session.clientName || "";
-  if (!workingName) return "";
-  return "Рабочее название: " + workingName;
-}
-
-function hasNameMismatch(request) {
-  return Boolean(request.brief && request.brief.company && request.session.clientName
-    && normalizeName(request.brief.company) !== normalizeName(request.session.clientName));
-}
-
-function sessionAmoUrl(request) {
-  return request.session.amoUrl || (request.brief && request.brief.amoLink) || "";
-}
-
-function briefLabel(briefId, briefTitle) {
-  if (briefTitle) return briefTitle;
-  var found = BRIEFS.find(function (item) { return item[0] === briefId; });
-  return found ? found[1] : (briefId || "Бриф");
-}
-
-function formatDateTime(value) {
-  if (!value) return "дата не указана";
-  var date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("ru-RU") + " " + String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0");
-}
-
-async function createWorkspaceForSession(token, button) {
-  var message = document.querySelector('[data-session-message="' + cssEscape(token) + '"]');
-  if (button) {
-    button.disabled = true;
-    button.textContent = "Создаю…";
-  }
-  if (message) message.textContent = "";
-
-  try {
-    const res = await fetch("/api/admin/portal-workspaces", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: token })
-    });
-    const data = await res.json().catch(function () { return {}; });
-    if (!res.ok || !data.ok) throw new Error("Не удалось открыть Presale Portal. Попробуйте ещё раз.");
-    var session = briefSessions.find(function (item) { return item.token === token; });
-    if (session) {
-      session.portalWorkspace = {
-        brief_id: data.brief_id,
-        workspace_id: data.workspace_id,
-        workspace_url: data.workspace_url,
-        created: data.created,
-        existing: data.existing
-      };
-    }
-    renderSessions();
-    if (data.workspace_url) window.open(data.workspace_url, "_blank", "noopener,noreferrer");
-  } catch (err) {
-    if (message) {
-      message.textContent = err.message || "Presale Portal временно недоступен. Попробуйте ещё раз.";
-      message.className = "session-message msg-err";
-    }
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = "Создать Workspace";
-    }
-  }
-}
-
-async function deleteSession(token, button) {
-  var session = briefSessions.find(function (item) { return item.token === token; });
-  if (!session) return;
-  if (!window.confirm("Удалить персональную ссылку? После удаления клиент не сможет открыть эту ссылку.")) return;
-  await mutateSession("/api/admin/sessions", {
-    method: "DELETE",
-    body: JSON.stringify({ token: token })
-  }, button, function () {
-    briefSessions = briefSessions.filter(function (item) { return item.token !== token; });
-    renderSessions();
-  });
-}
-
-async function archiveSession(token, button) {
-  await mutateSession("/api/admin/sessions", {
-    method: "PATCH",
-    body: JSON.stringify({ token: token, action: "archive" })
-  }, button, function (data) {
-    var session = briefSessions.find(function (item) { return item.token === token; });
-    if (session) Object.assign(session, data.session || {}, { archived: true });
-    renderSessions();
-  });
-}
-
-async function mutateSession(url, options, button, onSuccess) {
-  var original = button && button.textContent;
-  if (button) {
-    button.disabled = true;
-    button.textContent = "Сохраняю…";
-  }
-  try {
-    const res = await fetch(url, {
-      ...options,
-      headers: { "Content-Type": "application/json" }
-    });
-    const data = await res.json().catch(function () { return {}; });
-    if (!res.ok || !data.ok) throw new Error(data.message || "Не удалось сохранить изменение.");
-    onSuccess(data);
-  } catch (err) {
-    window.alert(err.message || "Не удалось сохранить изменение.");
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = original;
-    }
-  }
-}
-
 function emptyMessage() {
   const q = currentSearch;
   if (q) return "Ничего не найдено по запросу «" + q + "»";
@@ -536,37 +218,6 @@ function initFilters() {
     currentFilter = btn.dataset.filter;
     renderList();
   });
-}
-
-function initSessionFilters() {
-  var filters = el("session-filters");
-  if (!filters) return;
-  filters.addEventListener("click", function (event) {
-    var btn = event.target.closest("[data-session-filter]");
-    if (!btn) return;
-    filters.querySelectorAll(".session-filter").forEach(function (item) { item.classList.remove("active"); });
-    btn.classList.add("active");
-    sessionFilter = btn.dataset.sessionFilter || "action_required";
-    renderSessions();
-  });
-}
-
-function initJournalControls() {
-  var toggle = el("btn-toggle-journal");
-  var showAll = el("show-all-briefs");
-  if (toggle) {
-    toggle.addEventListener("click", function () {
-      journalOpen = !journalOpen;
-      renderList();
-    });
-  }
-  if (showAll) {
-    showAll.addEventListener("change", function () {
-      showAllBriefs = Boolean(showAll.checked);
-      renderList();
-    });
-  }
-  renderList();
 }
 
 function initSearch() {
@@ -682,7 +333,6 @@ async function saveChanges() {
     updateDirtyState();
     setMessage("save-msg", "Сохранено ✓");
     renderList();
-    renderSessions();
     const amoButton = el("btn-amo");
     if (isHttpUrl(amoLink)) {
       amoButton.href = amoLink;
@@ -727,7 +377,6 @@ async function toggleTest() {
     setMessage("test-msg", "Готово ✓");
     renderStats();
     renderList();
-    renderSessions();
   } catch (err) {
     setMessage("test-msg", err.message, true);
   } finally {
@@ -771,13 +420,10 @@ function closeCreateModal() {
 
 function resetCreateForm() {
   el("create-form").reset();
-  pendingDuplicatePayload = null;
   show("create-form");
   hide("create-result");
   hide("create-error");
-  hide("create-warning");
   el("create-error").textContent = "";
-  el("create-warning").textContent = "";
   el("btn-create").disabled = false;
 }
 
@@ -790,18 +436,6 @@ async function createPersonalLink(event) {
     amoUrl: String(form.get("amoUrl") || "").trim() || undefined
   };
   if (!payload.briefId || !payload.clientName) return;
-  var duplicate = findActiveDuplicateSession(payload.clientName);
-  if (duplicate) {
-    pendingDuplicatePayload = payload;
-    showDuplicateWarning(duplicate);
-    return;
-  }
-  await submitCreatePayload(payload);
-}
-
-async function submitCreatePayload(payload) {
-  pendingDuplicatePayload = null;
-  hide("create-warning");
 
   const btn = el("btn-create");
   btn.disabled = true;
@@ -820,12 +454,6 @@ async function submitCreatePayload(payload) {
     }
     el("personal-link").value = data.url;
     el("general-link").value = window.location.origin + "/?brief=" + payload.briefId;
-    if (data.session) {
-      briefSessions = [data.session].concat(briefSessions.filter(function (item) { return item.token !== data.session.token; }));
-      renderSessions();
-    } else {
-      loadSessions();
-    }
     hide("create-form");
     show("create-result");
   } catch (err) {
@@ -835,46 +463,6 @@ async function submitCreatePayload(payload) {
     btn.disabled = false;
     btn.textContent = "Создать ссылку";
   }
-}
-
-function findActiveDuplicateSession(clientName) {
-  var normalized = normalizeName(clientName);
-  if (!normalized) return null;
-  return briefSessions.find(function (session) {
-    return !session.archived
-      && session.status !== "filled"
-      && !(session.portalWorkspace && session.portalWorkspace.workspace_url)
-      && normalizeName(session.clientName) === normalized;
-  }) || null;
-}
-
-function showDuplicateWarning(session) {
-  var node = el("create-warning");
-  if (!node) return;
-  node.innerHTML = '<strong>Для этого клиента уже существует активная ссылка.</strong>' +
-    '<p>Можно открыть существующую ссылку или всё равно создать новую.</p>' +
-    '<div class="warning-actions">' +
-      '<button class="btn-secondary btn-small" type="button" id="btn-open-duplicate">Открыть существующую</button>' +
-      '<button class="btn-primary btn-small" type="button" id="btn-create-duplicate">Создать новую</button>' +
-    '</div>';
-  show("create-warning");
-  hide("create-error");
-  var openBtn = el("btn-open-duplicate");
-  var createBtn = el("btn-create-duplicate");
-  if (openBtn) {
-    openBtn.addEventListener("click", function () {
-      if (session.url) window.open(session.url, "_blank", "noopener,noreferrer");
-    }, { once: true });
-  }
-  if (createBtn) {
-    createBtn.addEventListener("click", function () {
-      if (pendingDuplicatePayload) submitCreatePayload(pendingDuplicatePayload);
-    }, { once: true });
-  }
-}
-
-function normalizeName(value) {
-  return String(value || "").toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ").trim();
 }
 
 async function copyText(text, button, successText) {
@@ -936,11 +524,6 @@ function isHttpUrl(value) {
   }
 }
 
-function cssEscape(value) {
-  if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(value);
-  return String(value || "").replace(/["\\]/g, "\\$&");
-}
-
 function setMessage(id, text, isError) {
   const node = el(id);
   node.textContent = text || "";
@@ -951,10 +534,6 @@ function el(id) {
   var node = document.getElementById(id);
   if (!node) console.warn("[admin] element not found: #" + id);
   return node;
-}
-function setText(id, value) {
-  var node = document.getElementById(id);
-  if (node) node.textContent = String(value);
 }
 function show(id) { var node = el(id); if (node) node.classList.remove("hidden"); }
 function hide(id) { var node = el(id); if (node) node.classList.add("hidden"); }
