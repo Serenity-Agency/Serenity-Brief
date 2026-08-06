@@ -3,16 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Очередь запросов — Serenity</title>
-  <meta name="app-build" content="2a0df9c · 2026-07-16 13:56 UTC">
-  <link rel="stylesheet" href="./serenity-tokens.css">
+  <title>Входящие брифы — Serenity</title>
+  <meta name="app-build" content="bcfc6ad · 2026-07-27 14:40 UTC">
   <link rel="stylesheet" href="./admin.css">
 </head>
 <body>
   <header class="header">
     <span class="header-brand">serenity</span>
     <span class="header-sep">·</span>
-    <span class="header-title">Очередь запросов</span>
+    <span class="header-title">Входящие брифы</span>
     <span id="current-user" class="current-user">Проверяем доступ…</span>
     <a href="/cdn-cgi/access/logout" class="btn-logout">Выйти</a>
   </header>
@@ -29,65 +28,31 @@
 
     <section class="create-card">
       <div>
-        <h1>Создать ссылку на бриф</h1>
-        <p>Создайте персональную ссылку, дождитесь заполнения и откройте Workspace в Presale Portal.</p>
+        <h1>Ссылки для клиентов</h1>
+        <p>Персональная ссылка сохраняет черновик клиента и закрепляет заявку за менеджером.</p>
       </div>
       <button id="btn-open-create" class="btn-primary">+ Создать персональную ссылку</button>
     </section>
 
-    <section class="link-workflow">
-      <div class="workflow-head">
-        <div>
-          <h2>Очередь запросов</h2>
-          <p>Один клиентский запрос остается одной карточкой: ссылка, заполненный бриф и Workspace показываются как этапы работы.</p>
-        </div>
-        <button id="btn-refresh-sessions" class="btn-secondary" type="button">Обновить</button>
+    <div class="toolbar">
+      <div class="filters" id="filters">
+        <button class="filter active" data-filter="all">Все</button>
+        <button class="filter" data-filter="new">Новые</button>
+        <button class="filter" data-filter="mine" id="filter-mine" disabled>Мои</button>
+        <button class="filter" data-filter="test">Тест</button>
       </div>
-      <div id="session-filters" class="session-filters" aria-label="Фильтр персональных ссылок">
-        <button class="session-filter active" type="button" data-session-filter="action_required">Требуют действий <span id="count-action-required">0</span></button>
-        <button class="session-filter" type="button" data-session-filter="waiting_client">Ожидают клиента <span id="count-waiting-client">0</span></button>
-        <button class="session-filter" type="button" data-session-filter="archive">Архив <span id="count-archive">0</span></button>
+      <div class="toolbar-end">
+        <input id="search" class="search-input" type="search" placeholder="Поиск по компании, имени, контакту…" autocomplete="off">
+        <span id="loaded-at" class="loaded-at"></span>
+        <button id="btn-refresh" class="btn-refresh" title="Обновить список" aria-label="Обновить список">↻</button>
+        <div class="stats" id="stats"></div>
       </div>
-      <div id="session-list" class="session-list">
-        <div class="state-msg">Загрузка запросов…</div>
-      </div>
-    </section>
+    </div>
 
-    <section id="brief-journal" class="brief-journal is-collapsed">
-      <div class="journal-head">
-        <div>
-          <h2>Журнал брифов</h2>
-          <p>История полученных брифов. Рабочие запросы ведутся в очереди выше.</p>
-        </div>
-        <button id="btn-toggle-journal" class="btn-secondary" type="button">Развернуть журнал</button>
-      </div>
-
-      <div id="journal-body" class="journal-body hidden">
-        <div class="toolbar">
-          <div class="filters" id="filters">
-            <button class="filter active" data-filter="all">Все</button>
-            <button class="filter" data-filter="new">Новые</button>
-            <button class="filter" data-filter="mine" id="filter-mine" disabled>Мои</button>
-            <button class="filter" data-filter="test">Тест</button>
-          </div>
-          <div class="toolbar-end">
-            <label class="toggle-inline">
-              <input id="show-all-briefs" type="checkbox">
-              <span>Показать все</span>
-            </label>
-            <input id="search" class="search-input" type="search" placeholder="Поиск по компании, имени, контакту…" autocomplete="off">
-            <span id="loaded-at" class="loaded-at"></span>
-            <button id="btn-refresh" class="btn-refresh" title="Обновить список" aria-label="Обновить список">↻</button>
-            <div class="stats" id="stats"></div>
-          </div>
-        </div>
-
-        <div id="loading" class="state-msg">Загрузка заявок…</div>
-        <div id="error" class="state-msg state-error hidden"></div>
-        <div id="empty" class="state-msg hidden"></div>
-        <div id="list" class="list"></div>
-      </div>
-    </section>
+    <div id="loading" class="state-msg">Загрузка заявок…</div>
+    <div id="error" class="state-msg state-error hidden"></div>
+    <div id="empty" class="state-msg hidden"></div>
+    <div id="list" class="list"></div>
   </main>
 
   <div id="overlay" class="overlay hidden"></div>
@@ -166,7 +131,6 @@
         <small class="field-help">Вставьте ссылку на сделку amoCRM. После отправки брифа Google Doc автоматически добавится в эту сделку.</small>
       </div>
 <p id="create-manager-note" class="manager-note"></p>
-      <div id="create-warning" class="inline-warning hidden"></div>
       <div id="create-error" class="inline-error hidden"></div>
       <div class="form-actions">
         <button id="btn-create" class="btn-primary" type="submit">Создать ссылку</button>
