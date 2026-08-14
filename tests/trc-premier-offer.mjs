@@ -36,8 +36,8 @@ assert.ok(js.includes("clone.setAttribute('aria-hidden', 'true')"), 'Клон ma
 assert.ok(js.includes("awardMarquee.addEventListener('pointerdown'"), 'Нет drag-управления лентой наград');
 assert.ok(html.includes('data-awards-prev') && html.includes('data-awards-next'), 'Нет стрелок ленты наград');
 assert.equal((html.match(/class="award-card(?: |")/g) || []).length, 14, 'В исходном наборе должно быть 14 подтверждённых наград');
-assert.equal((html.match(/class="award-mark"/g) || []).length, 10, 'У текстовых наград должен быть фирменный знак без буквенной заглушки');
-assert.equal((html.match(/class="award-card award-card-proof"/g) || []).length, 4, 'Четыре награды должны показывать реальные изображения из исходных материалов');
+assert.equal((html.match(/class="award-mark"/g) || []).length, 14, 'Все награды должны использовать единый фирменный знак — венок с номером места');
+assert.ok(!html.includes('award-card-proof') && !html.includes('award-proof'), 'В ленте не должно остаться карточек с оригинальным фото диплома — только унифицированный венок');
 assert.ok(!html.includes('class="laurel"'), 'Буквенные заглушки наград должны быть удалены');
 assert.ok(css.includes('.award-set{display:grid;grid-template-rows:1fr'), 'Лента наград должна быть однорядной');
 assert.ok(!css.includes('grid-template-rows:repeat(2'), 'В ленте наград не должно оставаться второго ряда');
@@ -83,7 +83,7 @@ assert.ok(!/<em\b/.test(html), 'Serif/italic акцентные обёртки �
 const localRefs = [...html.matchAll(/(?:src|href)="(assets\/[^"#]+)"/g)].map((match) => match[1]);
 assert.ok(localRefs.length >= 10, 'Ожидались реальные локальные изображения и логотипы');
 await Promise.all(localRefs.map((ref) => access(resolve(offerDir, ref))));
-await access(resolve(offerDir, '../spb-tv-media/assets/award-wreath-union1.svg'));
+assert.ok(localRefs.includes('assets/award-wreath.svg'), 'Венок наград должен быть локальным ассетом оффера, а не ссылкой на другой клиентский проект');
 
 const caseImages = ['case-cromi-hq.jpg', 'case-darkrain-hq.jpg', 'case-skladno-hq.webp', 'case-fliesen-hq.webp'];
 const caseBuffers = await Promise.all(caseImages.map((name) => readFile(resolve(offerDir, 'assets', name))));
