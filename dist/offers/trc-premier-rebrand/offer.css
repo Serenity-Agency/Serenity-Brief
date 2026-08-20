@@ -97,6 +97,16 @@ button{font:inherit}
 .payment-grid strong{display:block;margin:8px 0 44px;font-size:28px;font-weight:400}
 .payment-grid h3{font-size:20px;font-weight:400}
 .payment-grid p{font-size:13px;color:var(--muted)}
+.scope-list{border-top:1px solid rgba(255,255,255,.16)}
+.scope-list details{border-bottom:1px solid rgba(255,255,255,.14)}
+.scope-list summary{list-style:none;display:grid;grid-template-columns:minmax(0,1fr) 110px 180px 24px;gap:18px;align-items:center;min-height:88px;cursor:pointer}
+.scope-list summary::-webkit-details-marker{display:none}
+.scope-list summary b{font-size:18px;font-weight:400}
+.scope-list summary span{font-size:13px;color:var(--muted)}
+.scope-list summary strong{text-align:right;font-size:19px;font-weight:400}
+.scope-list summary:after{content:"+";grid-column:4;font-size:22px}
+.scope-list details[open] summary:after{content:"−"}
+.scope-list details div{max-width:1050px;padding:0 0 28px;color:#b1b1b5;font-size:14px}
 .cases{background:linear-gradient(180deg,var(--ink),var(--ink-alt))}
 .cases .display{margin-bottom:70px}
 .case-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px}
