@@ -11,26 +11,26 @@ const css = await readFile(resolve(offerDir, 'offer.css'), 'utf8');
 const js = await readFile(resolve(offerDir, 'offer.js'), 'utf8');
 
 for (const required of [
-  '955 000 ₽', '994 000 ₽', '1 949 000 ₽',
-  '14 недель', '17 недель',
-  '160 000 ₽', '75 000 ₽', '415 000 ₽', '344 000 ₽', '93 000 ₽',
+  '955 000 ₽', '1 512 000 ₽', '2 467 000 ₽',
+  '14 недель',
   'Рейтинг Рунета · 2022', 'Workspace Digital Awards', 'Ruward · 2025',
   'Макет демонстрирует принцип организации интерфейса',
-  '<b>В базовой стоимости:</b> подключение готовых SVG‑схем и предоставленных данных.',
-  '<b>Отдельная оценка:</b>',
   'Пять принципиально разных направлений на первой итерации',
   'Наружные конструкции: 5 типов',
   'по четырём уровням',
 ]) assert.ok(html.includes(required), `Не найден обязательный контент: ${required}`);
 
-assert.equal((html.match(/497 000 ₽/g) || []).length, 2, 'Обе части оплаты сайта должны быть по 497 000 ₽');
+for (const forbidden of ['17 недель', '994 000 ₽', '1 949 000 ₽', '955 028 ₽', 'Проверка по классам МКТУ 35', 'регистрация обозначения «Премьер» в текущем виде затруднена']) {
+  assert.ok(!html.includes(forbidden), `В HTML остался неподтверждённый или устаревший claim: ${forbidden}`);
+}
+for (const required of ['Strapi', 'Storyblok', 'Sanity.io', 'Next.js + TypeScript', 'правовой аудит обозначения', 'Подача заявки и дальнейшее юридическое сопровождение осуществляются заказчиком']) {
+  assert.ok(html.includes(required), `Не найдено обязательное уточнение: ${required}`);
+}
+for (const obsolete of ['CMS на Laravel', 'WordPress', '1С‑Битрикс', '−27%', '57%', '11–12%', '9,7%', '38%', '17,5%', '70%']) {
+  assert.ok(!html.includes(obsolete), `В HTML остался неподтверждённый вариант или показатель: ${obsolete}`);
+}
 assert.ok(!html.includes('127 рабочих'), 'Опечатка 127 рабочих дней не должна попасть в HTML');
 assert.ok(!html.includes('90% брифов'), 'Неподтверждённое сравнение брифов должно быть удалено');
-for (const obsolete of ['982 632 ₽', '491 316 ₽', '159 975 ₽', '75 600 ₽', '414 750 ₽', '343 707 ₽', '93 450 ₽', '74 865 ₽']) {
-  assert.ok(!html.includes(obsolete), `Старая неокруглённая сумма осталась в HTML: ${obsolete}`);
-}
-const baseLines = [160_000, 75_000, 415_000, 344_000];
-assert.equal(baseLines.reduce((sum, value) => sum + value, 0), 994_000, 'Базовые строки должны составлять ровно 994 000 ₽');
 assert.ok(html.indexOf('id="cases"') < html.indexOf('class="awards'), 'Награды должны идти после кейсов');
 assert.ok(html.indexOf('class="awards') < html.indexOf('class="final-cta'), 'Финальный CTA должен идти после наград');
 assert.ok(css.includes('@media (prefers-reduced-motion:reduce)'), 'Нет reduced-motion режима');
@@ -81,7 +81,7 @@ assert.ok(css.includes('.hero h1{max-width:1120px') && css.includes('font-size:c
 assert.ok(css.includes('.final-cta h2{max-width:980px') && css.includes('font-size:clamp(44px,4.45vw,64px)'), 'Финальный CTA не должен быть чрезмерно крупным');
 assert.ok(css.includes('.award-mark strong{position:absolute;z-index:1;top:36px') && css.includes('.award-mark small{position:absolute;z-index:1;top:75px'), 'Число и подпись места в наградах должны иметь раздельные уровни');
 assert.ok(html.includes('Serenity × ТРЦ «Премьер»') && html.includes('Рязань · 2026'), 'Hero должен явно связывать Serenity, Премьер и Рязань');
-assert.ok(html.includes('<span>20 лет</span><strong>Делаем маркетинг лучше</strong>'), 'В финале нужна согласованная подпись с прописной буквы');
+assert.ok(html.includes('<h2 class="reveal">Делаем маркетинг лучше</h2>'), 'В финальном CTA должен остаться согласованный заголовок');
 const finalSection = html.slice(html.indexOf('<section class="final-cta'));
 assert.ok(!finalSection.includes('serenity-logo.svg'), 'В финальном footer не должно быть отдельного файла логотипа Serenity');
 assert.ok(!/<em\b/.test(html), 'Serif/italic акцентные обёртки должны быть удалены');

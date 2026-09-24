@@ -12,9 +12,14 @@ const js = await readFile(resolve(offerDir, 'offer.js'), 'utf8');
 
 // Commercial facts: this version headlines the rebrand cost only, never the combined figure
 assert.ok(html.includes('955 000 ₽'), 'Должна быть указана стоимость ребрендинга 955 000 ₽');
-assert.equal((html.match(/994 000 ₽/g) || []).length, 2, 'Стоимость сайта 994 000 ₽ должна упоминаться как отдельное направление (контекст + стоимость)');
-assert.ok(!html.includes('1 949 000 ₽'), 'В защитной версии по ребрендингу не должно быть комплексной суммы 1 949 000 ₽');
-assert.ok(html.includes('14 недель') && html.includes('17 недель'), 'Должна быть объяснена логика 17 → 14 недель');
+assert.ok(html.includes('1 512 000 ₽'), 'Стоимость сайта должна упоминаться как отдельное направление');
+assert.ok(!html.includes('2 467 000 ₽'), 'В защитной версии по ребрендингу не должно быть комплексной суммы');
+for (const forbidden of ['17 недель', '994 000 ₽', '1 949 000 ₽', '955 028 ₽', 'Проверка по классам МКТУ 35', 'регистрация обозначения «Премьер» в текущем виде затруднена']) {
+  assert.ok(!html.includes(forbidden), `В HTML остался неподтверждённый или устаревший claim: ${forbidden}`);
+}
+for (const required of ['14 недель', 'правовой аудит обозначения', 'Подача заявки и дальнейшее юридическое сопровождение осуществляются заказчиком']) {
+  assert.ok(html.includes(required), `Не найдено обязательное уточнение: ${required}`);
+}
 
 for (const required of [
   'Пять принципиально разных направлений на первой итерации',
@@ -28,8 +33,8 @@ for (const required of [
 
 // Site must not be re-litigated in depth here — only referenced as a separate track
 assert.ok(!html.includes('id="site"'), 'В защитной версии не должно быть полного раздела про сайт');
-assert.ok(!html.includes('class="scope-list"'), 'Детализация разработки сайта не должна дублироваться в защитной версии');
 assert.ok(!html.includes('class="cms-grid"'), 'Технический разбор CMS сайта не относится к защите ребрендинга');
+assert.ok(!html.includes('Маркетинговое проектирование и контент'), 'Детализация разработки сайта не должна дублироваться в защитной версии');
 
 // Section order: context -> rebrand -> environment -> process -> budget -> cases -> awards -> cta
 const order = ['id="context"', 'id="rebrand"', 'id="environment"', 'id="process"', 'id="budget"', 'id="cases"', 'id="awards"', 'id="contact"'];
